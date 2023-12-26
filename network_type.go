@@ -3,12 +3,12 @@ package osm2gmns
 type NetworkType uint16
 
 const (
-	NETWORK_AUTO = NetworkType(iota + 1)
+	NETWORK_UNDEFINED = NetworkType(iota)
+	NETWORK_AUTO
 	NETWORK_BIKE
 	NETWORK_WALK
 	NETWORK_RAILWAY
 	NETWORK_AEROWAY
-	NETWORK_UNDEFINED = NetworkType(0)
 )
 
 func (iotaIdx NetworkType) String() string {

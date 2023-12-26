@@ -3,7 +3,8 @@ package osm2gmns
 type LinkType uint16
 
 const (
-	LINK_MOTORWAY = LinkType(iota + 1)
+	LINK_UNDEFINED = LinkType(iota)
+	LINK_MOTORWAY
 	LINK_TRUNK
 	LINK_PRIMARY
 	LINK_SECONDARY
@@ -18,8 +19,6 @@ const (
 	LINK_CONNECTOR
 	LINK_RAILWAY
 	LINK_AEROWAY
-
-	LINK_UNDEFINED = LinkType(0)
 )
 
 func (iotaIdx LinkType) String() string {

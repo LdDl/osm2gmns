@@ -3,7 +3,8 @@ package osm2gmns
 type HighwayType uint16
 
 const (
-	HIGHWAY_MOTORWAY = HighwayType(iota + 1)
+	HIGHWAY_UNDEFINED = HighwayType(iota)
+	HIGHWAY_MOTORWAY
 	HIGHWAY_MOTORWAY_LINK
 	HIGHWAY_TRUNK
 	HIGHWAY_TRUNK_LINK
@@ -27,7 +28,7 @@ const (
 )
 
 func (iotaIdx HighwayType) String() string {
-	return [...]string{"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "residential", "residential_link", "living_street", "service", "services", "cycleway", "footway", "pedestrian", "steps", "track", "unclassified"}[iotaIdx-1]
+	return [...]string{"undefined", "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "residential", "residential_link", "living_street", "service", "services", "cycleway", "footway", "pedestrian", "steps", "track", "unclassified"}[iotaIdx]
 }
 
 func getHighwayType(str string) HighwayType {

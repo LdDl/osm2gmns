@@ -3,10 +3,10 @@ package osm2gmns
 type AgentType uint16
 
 const (
-	AGENT_AUTO = AgentType(iota + 1)
+	AGENT_UNDEFINED = AgentType(iota)
+	AGENT_AUTO
 	AGENT_BIKE
 	AGENT_WALK
-	AGENT_UNDEFINED = AgentType(0)
 )
 
 func (iotaIdx AgentType) String() string {
