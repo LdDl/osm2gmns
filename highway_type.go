@@ -25,10 +25,11 @@ const (
 	HIGHWAY_STEPS
 	HIGHWAY_TRACK
 	HIGHWAY_UNCLASSIFIED
+	HIGHWAY_TRAFFIC_SIGNALS
 )
 
 func (iotaIdx HighwayType) String() string {
-	return [...]string{"undefined", "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "residential", "residential_link", "living_street", "service", "services", "cycleway", "footway", "pedestrian", "steps", "track", "unclassified"}[iotaIdx]
+	return [...]string{"undefined", "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "residential", "residential_link", "living_street", "service", "services", "cycleway", "footway", "pedestrian", "steps", "track", "unclassified", "traffic_signals"}[iotaIdx]
 }
 
 func getHighwayType(str string) HighwayType {
@@ -85,5 +86,6 @@ var (
 		"steps":            HIGHWAY_STEPS,
 		"track":            HIGHWAY_TRACK,
 		"unclassified":     HIGHWAY_UNCLASSIFIED,
+		"traffic_signals":  HIGHWAY_TRAFFIC_SIGNALS,
 	}
 )
