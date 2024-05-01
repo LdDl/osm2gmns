@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -47,23 +48,23 @@ func prepareNodes(nodesSet map[osm.NodeID]*Node) (map[osm.NodeID]*Node, error) {
 		}
 	}
 	if VERBOSE {
-		log.Info().Str("scope", "prepare_nodes").Int("prepared_ways_num", len(preparedNodes)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing nodes done!")
+		log.Info().Str("scope", "prepare_nodes").Int("prepared_nodes_num", len(preparedNodes)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing nodes done!")
 	}
 	return preparedNodes, nil
 }
 
 // prepareWays prepares ways: link type, link class, link connection type, allowed agent types. Also mutates nodes data: increments use count (when being used in ways)
-func prepareWays(ways []*WayOSM, nodesSet map[osm.NodeID]*Node, allowedAgentTypes []types.AgentType) ([]*WayOSM, error) {
+func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*Node, allowedAgentTypes []types.AgentType) ([]*wrappers.WayOSM, error) {
 	if VERBOSE {
 		log.Info().Str("scope", "prepare_ways").Int("ways_num", len(ways)).Msg("Preparing ways")
 	}
 	st := time.Now()
 
-	preparedWays := make([]*WayOSM, 0, len(ways))
-	waysPOI := make([]*WayOSM, 0, len(ways)/2)
+	preparedWays := make([]*wrappers.WayOSM, 0, len(ways))
+	waysPOI := make([]*wrappers.WayOSM, 0, len(ways)/2)
 	for i := range ways {
 		way := ways[i]
-		if way.tags.IsPOI() {
+		if way.Tags.IsPOI() {
 			waysPOI = append(waysPOI, way)
 			continue
 		}
@@ -73,38 +74,38 @@ func prepareWays(ways []*WayOSM, nodesSet map[osm.NodeID]*Node, allowedAgentType
 			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("Unexpected number of nodes")
 			return preparedWays, nil
 		}
-		way.osmSourceNodeID = way.Nodes[0]
-		way.osmTargetNodeID = way.Nodes[len(way.Nodes)-1]
-		if way.osmSourceNodeID == way.osmTargetNodeID {
-			way.isCycle = true
+		way.OsmSourceNodeID = way.Nodes[0]
+		way.OsmTargetNodeID = way.Nodes[len(way.Nodes)-1]
+		if way.OsmSourceNodeID == way.OsmTargetNodeID {
+			way.IsCycle = true
 		}
-		switch way.wayType {
-		case WAY_TYPE_HIGHWAY:
-			if way.wayPOI != nil {
+		switch way.WayType {
+		case wrappers.WAY_TYPE_HIGHWAY:
+			if way.WayPOI != nil {
 				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'highway' POI is not handled yet")
 			}
-			if way.isArea || way.isHighwayNegligible {
+			if way.IsArea || way.IsHighwayNegligible {
 				continue
 			}
-			highwayType := types.NewHighwayTypeFrom(way.tags.Highway)
+			highwayType := types.NewHighwayTypeFrom(way.Tags.Highway)
 			linkInfo := types.NewCompositionLinkType(highwayType)
-			if way.tags.OnewayDefault {
+			if way.Tags.OnewayDefault {
 				// Override `oneway` for Way, but do not mutate source tags map
-				way.isOneWay = types.NewOnewayDefault(linkInfo.LinkType)
+				way.IsOneWay = types.NewOnewayDefault(linkInfo.LinkType)
 			}
-			way.linkConnectionType = linkInfo.LinkConnectionType
-			way.linkType = linkInfo.LinkType
-			way.linkClass = types.LINK_CLASS_HIGHWAY
+			way.LinkConnectionType = linkInfo.LinkConnectionType
+			way.LinkType = linkInfo.LinkType
+			way.LinkClass = types.LINK_CLASS_HIGHWAY
 
 			// Need to consider allowed tags only
-			extractedAgentTypes := types.NewAllowableAgentTypeFrom(way.tags.MotorVehicle, way.tags.Motorcar, way.tags.Bicycle, way.tags.Foot, way.tags.Highway, way.tags.Access, way.tags.Service)
+			extractedAgentTypes := types.NewAllowableAgentTypeFrom(way.Tags.MotorVehicle, way.Tags.Motorcar, way.Tags.Bicycle, way.Tags.Foot, way.Tags.Highway, way.Tags.Access, way.Tags.Service)
 			agentsIntersection := types.AgentsIntersection(extractedAgentTypes, allowedAgentTypes)
 			if len(agentsIntersection) == 0 {
 				continue
 			}
-			way.allowedAgentTypes = make([]types.AgentType, 0, len(agentsIntersection))
+			way.AllowedAgentTypes = make([]types.AgentType, 0, len(agentsIntersection))
 			for agentType := range agentsIntersection {
-				way.allowedAgentTypes = append(way.allowedAgentTypes, agentType)
+				way.AllowedAgentTypes = append(way.AllowedAgentTypes, agentType)
 			}
 			// Increment nodes uses
 			for _, nodeID := range way.Nodes {
@@ -120,14 +121,14 @@ func prepareWays(ways []*WayOSM, nodesSet map[osm.NodeID]*Node, allowedAgentType
 			nodesSet[way.Nodes[len(way.Nodes)-1]].isCrossing = true
 			// Append processed way to the filtered list
 			preparedWays = append(preparedWays, way)
-		case WAY_TYPE_RAILWAY:
+		case wrappers.WAY_TYPE_RAILWAY:
 			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'railway' is not handled yet")
-			if way.wayPOI != nil && way.wayPOI.poiType == POI_TYPE_RAILWAY {
+			if way.WayPOI != nil && way.WayPOI.PoiType == types.POI_TYPE_RAILWAY {
 				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'railway' POI is not handled yet")
 			}
-		case WAY_TYPE_AEROWAY:
+		case wrappers.WAY_TYPE_AEROWAY:
 			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'airway' is not handled yet")
-			if way.wayPOI != nil && way.wayPOI.poiType == POI_TYPE_AEROWAY {
+			if way.WayPOI != nil && way.WayPOI.PoiType == types.POI_TYPE_AEROWAY {
 				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'aeroway' POI is not handled yet")
 			}
 		default:

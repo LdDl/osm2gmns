@@ -1,6 +1,7 @@
 package osm2gmns
 
 import (
+	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 )
 
@@ -13,5 +14,5 @@ type OSMScanner interface {
 
 type OSMWaysNodes struct {
 	nodes map[osm.NodeID]*Node
-	ways  []*WayOSM
+	ways  []*wrappers.WayOSM
 }

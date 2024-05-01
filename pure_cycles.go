@@ -3,12 +3,13 @@ package osm2gmns
 import (
 	"time"
 
+	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/rs/zerolog/log"
 )
 
 // markPureCycles marks pure cycles for given set of ways and reference info about nodes
-func markPureCycles(nodesSet map[osm.NodeID]*Node, ways []*WayOSM) error {
+func markPureCycles(nodesSet map[osm.NodeID]*Node, ways []*wrappers.WayOSM) error {
 	if VERBOSE {
 		log.Info().Str("scope", "ispect_pure_cycles").Int("nodes_num", len(nodesSet)).Int("ways_num", len(ways)).Msg("Marking pure cycles")
 	}
@@ -18,10 +19,10 @@ func markPureCycles(nodesSet map[osm.NodeID]*Node, ways []*WayOSM) error {
 	for i := range ways {
 		way := ways[i]
 		// Find and mark pure cycles
-		if way.isCycle {
+		if way.IsCycle {
 			cyclesNum++
 			// Assume that way has pure cycle
-			way.isPureCycle = true
+			way.IsPureCycle = true
 			for _, nodeID := range way.Nodes {
 				existingNode, ok := nodesSet[nodeID]
 				if !ok {
@@ -30,10 +31,10 @@ func markPureCycles(nodesSet map[osm.NodeID]*Node, ways []*WayOSM) error {
 				}
 				if existingNode.isCrossing {
 					// Way has not pure cycle if child node is cross
-					way.isPureCycle = false
+					way.IsPureCycle = false
 				}
 			}
-			if way.isPureCycle {
+			if way.IsPureCycle {
 				pureCyclesNum++
 			}
 		}

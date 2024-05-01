@@ -33,7 +33,7 @@ func readOSM(filename string, poi bool) (*OSMWaysNodes, error) {
 	}
 	st := time.Now()
 
-	ways := []*WayOSM{}
+	ways := []*wrappers.WayOSM{}
 	nodesSeen := make(map[osm.NodeID]struct{})
 	{
 		var scannerWays OSMScanner
@@ -57,53 +57,10 @@ func readOSM(filename string, poi bool) (*OSMWaysNodes, error) {
 				continue
 			}
 			way := obj.(*osm.Way)
-			// Call tags flattening to make further processing easier
-			tags := wrappers.NewWayTagsFrom(way)
-
-			wayType := WAY_TYPE_UNDEFINED
-			poiName := ""
-			poiType := POI_TYPE_UNDEFINED
-			if tags.IsHighway() {
-				wayType = WAY_TYPE_HIGHWAY
-				if tags.IsHighwayPOI() {
-					poiName = tags.Highway
-					poiType = POI_TYPE_HIGHWAY
-				}
-			} else if tags.IsRailway() {
-				wayType = WAY_TYPE_RAILWAY
-				if tags.IsRailwayPOI() {
-					poiName = tags.Railway
-					poiType = POI_TYPE_RAILWAY
-				}
-			} else if tags.IsAeroway() {
-				wayType = WAY_TYPE_AEROWAY
-				if tags.IsAerowayPOI() {
-					poiName = tags.Aeroway
-					poiType = POI_TYPE_AEROWAY
-				}
-			}
-
-			preparedWay := &WayOSM{
-				ID:                  way.ID,
-				wayType:             wayType,
-				isHighwayNegligible: tags.IsHighwayNegligible(),
-				Nodes:               make([]osm.NodeID, 0, len(way.Nodes)),
-				tags:                tags,
-				freeSpeed:           -1.0,
-				capacity:            -1.0,
-				isArea:              tags.Area != "" && tags.Area != "no",
-				isOneWay:            tags.Oneway,
-			}
-			if poiName != "" {
-				preparedWay.wayPOI = &WayPOIProps{
-					poiName: poiName,
-					poiType: poiType,
-				}
-			}
+			preparedWay := wrappers.NewWayOSMFrom(way)
 			// Mark way's nodes as seen to remove isolated nodes in further
 			for _, node := range way.Nodes {
 				nodesSeen[node.ID] = struct{}{}
-				preparedWay.Nodes = append(preparedWay.Nodes, node.ID)
 			}
 			ways = append(ways, preparedWay)
 		}
