@@ -28,22 +28,22 @@ func (data *OSMWaysNodes) prepareNetwork(allowedAgentTypes []types.AgentType, po
 }
 
 // prepareNodes examines nodes which has use count > 0 and use count > 2 on being cross
-func prepareNodes(nodesSet map[osm.NodeID]*Node) (map[osm.NodeID]*Node, error) {
+func prepareNodes(nodesSet map[osm.NodeID]*wrappers.NodeOSM) (map[osm.NodeID]*wrappers.NodeOSM, error) {
 	if VERBOSE {
 		log.Info().Str("scope", "prepare_nodes").Int("nodes_num", len(nodesSet)).Msg("Preparing nodes")
 	}
 	st := time.Now()
 	for nodeID := range nodesSet {
 		node := nodesSet[nodeID]
-		if node.useCount >= 2 || node.controlType == types.CONTROL_TYPE_IS_SIGNAL {
-			node.isCrossing = true
+		if node.UseCount >= 2 || node.ControlType == types.CONTROL_TYPE_IS_SIGNAL {
+			node.IsCrossing = true
 		}
 	}
-	preparedNodes := make(map[osm.NodeID]*Node)
+	preparedNodes := make(map[osm.NodeID]*wrappers.NodeOSM)
 	// Filter nodes that are not used at all (building, parks and etc.)
 	for nodeID := range nodesSet {
 		node := nodesSet[nodeID]
-		if node.useCount > 0 {
+		if node.UseCount > 0 {
 			preparedNodes[nodeID] = node
 		}
 	}
@@ -54,7 +54,7 @@ func prepareNodes(nodesSet map[osm.NodeID]*Node) (map[osm.NodeID]*Node, error) {
 }
 
 // prepareWays prepares ways: link type, link class, link connection type, allowed agent types. Also mutates nodes data: increments use count (when being used in ways)
-func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*Node, allowedAgentTypes []types.AgentType) ([]*wrappers.WayOSM, error) {
+func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM, allowedAgentTypes []types.AgentType) ([]*wrappers.WayOSM, error) {
 	if VERBOSE {
 		log.Info().Str("scope", "prepare_ways").Int("ways_num", len(ways)).Msg("Preparing ways")
 	}
@@ -114,11 +114,11 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*Node, allowed
 					log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("node_id", int(nodeID)).Msg("Can't find way node in nodes set")
 					return preparedWays, nil
 				}
-				existingNode.useCount++
+				existingNode.UseCount++
 			}
 			// Mark first and last node as used in cross
-			nodesSet[way.Nodes[0]].isCrossing = true
-			nodesSet[way.Nodes[len(way.Nodes)-1]].isCrossing = true
+			nodesSet[way.Nodes[0]].IsCrossing = true
+			nodesSet[way.Nodes[len(way.Nodes)-1]].IsCrossing = true
 			// Append processed way to the filtered list
 			preparedWays = append(preparedWays, way)
 		case wrappers.WAY_TYPE_RAILWAY:

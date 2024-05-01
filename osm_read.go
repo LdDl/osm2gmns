@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"
@@ -85,7 +84,7 @@ func readOSM(filename string, poi bool) (*OSMWaysNodes, error) {
 		log.Info().Str("scope", "osm_read").Msg("Processing nodes")
 	}
 	st = time.Now()
-	nodes := make(map[osm.NodeID]*Node)
+	nodes := make(map[osm.NodeID]*wrappers.NodeOSM)
 	{
 
 		var scannerNodes OSMScanner
@@ -111,23 +110,8 @@ func readOSM(filename string, poi bool) (*OSMWaysNodes, error) {
 			node := obj.(*osm.Node)
 			if _, ok := nodesSeen[node.ID]; ok {
 				delete(nodesSeen, node.ID)
-				nameText := node.Tags.Find("name")
-				highwayText := node.Tags.Find("highway")
-				controlType := types.CONTROL_TYPE_NOT_SIGNAL
-				if highwayText == "traffic_signals" {
-					controlType = types.CONTROL_TYPE_IS_SIGNAL
-				}
-				nodes[node.ID] = &Node{
-					name:        nameText,
-					node:        *node,
-					ID:          node.ID,
-					useCount:    0,
-					isCrossing:  false,
-					controlType: controlType,
-					osmData: NodeOSMInfo{
-						highway: highwayText,
-					},
-				}
+				preparedNode := wrappers.NewNodeOSMFrom(node)
+				nodes[node.ID] = preparedNode
 			}
 		}
 		err = scannerNodes.Err()

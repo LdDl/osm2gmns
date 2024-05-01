@@ -13,6 +13,6 @@ type OSMScanner interface {
 }
 
 type OSMWaysNodes struct {
-	nodes map[osm.NodeID]*Node
+	nodes map[osm.NodeID]*wrappers.NodeOSM
 	ways  []*wrappers.WayOSM
 }
