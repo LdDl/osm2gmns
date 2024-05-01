@@ -65,7 +65,7 @@ var (
 )
 
 type WayTags struct {
-	name              string
+	Name              string
 	Highway           string
 	Railway           string
 	Aeroway           string
@@ -85,11 +85,11 @@ type WayTags struct {
 	leisure      string
 	junction     string
 
-	maxSpeed float64
+	MaxSpeed float64
 
-	lanes         int
-	lanesForward  int
-	lanesBackward int
+	Lanes         int
+	LanesForward  int
+	LanesBackward int
 
 	Oneway        bool
 	OnewayDefault bool
@@ -257,7 +257,7 @@ func NewWayTagsFrom(way *osm.Way) WayTags {
 	}
 
 	return WayTags{
-		name:              name,
+		Name:              name,
 		Highway:           highway,
 		Railway:           railway,
 		Aeroway:           aeroway,
@@ -275,10 +275,10 @@ func NewWayTagsFrom(way *osm.Way) WayTags {
 		building:          building,
 		amenity:           amenity,
 		leisure:           leisure,
-		maxSpeed:          maxSpeed,
-		lanes:             lanes,
-		lanesForward:      lanesForward,
-		lanesBackward:     lanesBackward,
+		MaxSpeed:          maxSpeed,
+		Lanes:             lanes,
+		LanesForward:      lanesForward,
+		LanesBackward:     lanesBackward,
 		Oneway:            oneway,
 		OnewayDefault:     onewayDefault,
 		isReversed:        isReversed,

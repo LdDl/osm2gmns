@@ -25,10 +25,19 @@ func (data *OSMWaysNodes) prepareNetwork(allowedAgentTypes []types.AgentType, po
 		return errors.Wrap(err, "Can't mark pure cycles")
 	}
 	// @todo: implement constructor for macro network
-	err = macro.NewNetFromOSM(preparedWays, preparedNodes)
+	if VERBOSE {
+		log.Info().Str("scope", "gen_macro").Msg("Preparing macroscopic network")
+	}
+	st := time.Now()
+	macroNet, err := macro.NewNetFromOSM(preparedWays, preparedNodes)
 	if err != nil {
 		return errors.Wrap(err, "Can't prepare macroscopic network")
 	}
+	if VERBOSE {
+		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing macroscopic network done!")
+	}
+	// @todo
+	panic("Evaluate euclidean geometries for links and nodes")
 	return nil
 }
 

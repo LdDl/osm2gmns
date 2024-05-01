@@ -27,11 +27,11 @@ type WayOSM struct {
 	AllowedAgentTypes   []types.AgentType
 	Nodes               []osm.NodeID
 	segments            [][]osm.NodeID
-	capacity            int
+	Capacity            int
 	ID                  osm.WayID
 	WayType             WayType
 	IsHighwayNegligible bool
-	freeSpeed           float64
+	FreeSpeed           float64
 	OsmSourceNodeID     osm.NodeID
 	OsmTargetNodeID     osm.NodeID
 	LinkConnectionType  types.LinkConnectionType
@@ -79,8 +79,8 @@ func NewWayOSMFrom(way *osm.Way) *WayOSM {
 		IsHighwayNegligible: tags.IsHighwayNegligible(),
 		Nodes:               make([]osm.NodeID, 0, len(way.Nodes)),
 		Tags:                tags,
-		freeSpeed:           -1.0,
-		capacity:            -1.0,
+		FreeSpeed:           -1.0,
+		Capacity:            -1.0,
 		IsArea:              tags.Area != "" && tags.Area != "no",
 		IsOneWay:            tags.Oneway,
 	}

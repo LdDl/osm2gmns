@@ -98,3 +98,24 @@ func NewOnewayDefault(lt LinkType) bool {
 	}
 	return false
 }
+
+func NewCapacityDefault(lt LinkType) int {
+	if defaultCap, ok := defaultCapacityByLinkType[lt]; ok {
+		return defaultCap
+	}
+	return -1
+}
+
+func NewSpeedDefault(lt LinkType) float64 {
+	if defaultSpeed, ok := defaultSpeedByLinkType[lt]; ok {
+		return defaultSpeed
+	}
+	return -1
+}
+
+func NewLanesDefault(lt LinkType) int {
+	if defaultLanes, ok := defaultLanesByLinkType[lt]; ok {
+		return defaultLanes
+	}
+	return -1
+}

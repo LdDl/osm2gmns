@@ -6,9 +6,9 @@ import (
 )
 
 type NodeOSM struct {
-	node        osm.Node
-	name        string
-	osmData     NodeOSMInfo
+	InnerNode   osm.Node
+	Name        string
+	OsmData     NodeOSMInfo
 	ID          osm.NodeID
 	UseCount    int
 	ControlType types.ControlType
@@ -16,7 +16,7 @@ type NodeOSM struct {
 }
 
 type NodeOSMInfo struct {
-	highway string
+	Highway string
 }
 
 func NewNodeOSMFrom(node *osm.Node) *NodeOSM {
@@ -27,14 +27,14 @@ func NewNodeOSMFrom(node *osm.Node) *NodeOSM {
 		controlType = types.CONTROL_TYPE_IS_SIGNAL
 	}
 	preparedNode := NodeOSM{
-		name:        nameText,
-		node:        *node,
+		Name:        nameText,
+		InnerNode:   *node,
 		ID:          node.ID,
 		UseCount:    0,
 		IsCrossing:  false,
 		ControlType: controlType,
-		osmData: NodeOSMInfo{
-			highway: highwayText,
+		OsmData: NodeOSMInfo{
+			Highway: highwayText,
 		},
 	}
 	return &preparedNode
