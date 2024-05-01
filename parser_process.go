@@ -3,6 +3,7 @@ package osm2gmns
 import (
 	"time"
 
+	"github.com/LdDl/osm2gmns/macro"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
@@ -24,6 +25,10 @@ func (data *OSMWaysNodes) prepareNetwork(allowedAgentTypes []types.AgentType, po
 		return errors.Wrap(err, "Can't mark pure cycles")
 	}
 	// @todo: implement constructor for macro network
+	err = macro.NewNetFromOSM(preparedWays, preparedNodes)
+	if err != nil {
+		return errors.Wrap(err, "Can't prepare macroscopic network")
+	}
 	return nil
 }
 
