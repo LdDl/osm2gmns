@@ -3,23 +3,26 @@ package osm2gmns
 import (
 	"fmt"
 	"strings"
+
+	"github.com/LdDl/osm2gmns/types"
 )
 
 type Parser struct {
-	filename         string
-	networkTypes     []string
-	linkTypes        []string
-	preparePOI       bool
-	poiSamplingRatio float64
-	strictMode       bool
-	offset           string
-	minNodes         int
-	combine          bool
-	defaultLanes     map[string]interface{}
-	defaultSpeed     map[string]float64
-	defaultCapacity  map[string]float64
-	startNodeID      int
-	startLinkID      int
+	filename          string
+	networkTypes      []string
+	linkTypes         []string
+	preparePOI        bool
+	poiSamplingRatio  float64
+	strictMode        bool
+	offset            string
+	minNodes          int
+	combine           bool
+	defaultLanes      map[string]interface{}
+	defaultSpeed      map[string]float64
+	defaultCapacity   map[string]float64
+	startNodeID       int
+	startLinkID       int
+	allowedAgentTypes []types.AgentType
 }
 
 func NewParser(fileName string, options ...func(*Parser)) *Parser {
@@ -32,6 +35,9 @@ func NewParser(fileName string, options ...func(*Parser)) *Parser {
 	}
 	for _, option := range options {
 		option(parser)
+	}
+	if len(parser.allowedAgentTypes) == 0 {
+		WithAllowedAgentTypes(types.AGENT_TYPES_DEFAULT)(parser)
 	}
 	return parser
 }
@@ -114,6 +120,19 @@ func WithStartLinkID(startLinkID int) func(*Parser) {
 	}
 }
 
+func WithVerbose(verbose bool) func(*Parser) {
+	return func(parser *Parser) {
+		VERBOSE = verbose
+	}
+}
+
+func WithAllowedAgentTypes(allowedAgentTypes []types.AgentType) func(*Parser) {
+	return func(parser *Parser) {
+		parser.allowedAgentTypes = make([]types.AgentType, len(allowedAgentTypes))
+		copy(parser.allowedAgentTypes, allowedAgentTypes)
+	}
+}
+
 func (parser *Parser) String() string {
 	return fmt.Sprintf(`
 Network parser parameters:
@@ -131,6 +150,7 @@ Network parser parameters:
 	default_capacity: %v
 	start_node_id: %d
 	start_link_id: %d
+	global verbose?: %t
 	`,
 		parser.filename,
 		strings.Join(parser.networkTypes, ","),
@@ -146,5 +166,6 @@ Network parser parameters:
 		parser.defaultCapacity,
 		parser.startNodeID,
 		parser.startLinkID,
+		VERBOSE,
 	)
 }

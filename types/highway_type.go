@@ -1,4 +1,6 @@
-package osm2gmns
+package types
+
+import "strings"
 
 type HighwayType uint16
 
@@ -32,11 +34,11 @@ func (iotaIdx HighwayType) String() string {
 	return [...]string{"undefined", "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "residential", "residential_link", "living_street", "service", "services", "cycleway", "footway", "pedestrian", "steps", "track", "unclassified", "traffic_signals"}[iotaIdx]
 }
 
-func getHighwayType(str string) HighwayType {
-	if found, ok := highwaysTypes[str]; ok {
+func NewHighwayTypeFrom(str string) HighwayType {
+	if found, ok := highwaysTypes[strings.ToLower(str)]; ok {
 		return found
 	}
-	return 0
+	return HIGHWAY_UNDEFINED
 }
 
 var (
@@ -89,3 +91,13 @@ var (
 		"traffic_signals":  HIGHWAY_TRAFFIC_SIGNALS,
 	}
 )
+
+func NewCompositionLinkType(hwt HighwayType) linkComposition {
+	if found, ok := linkTypeByHighway[hwt]; ok {
+		return found
+	}
+	return linkComposition{
+		LinkType:           LINK_UNDEFINED,
+		LinkConnectionType: NOT_A_LINK,
+	}
+}

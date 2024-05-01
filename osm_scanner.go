@@ -10,3 +10,8 @@ type OSMScanner interface {
 	Err() error
 	Object() osm.Object
 }
+
+type OSMWaysNodes struct {
+	nodes map[osm.NodeID]*Node
+	ways  []*WayOSM
+}

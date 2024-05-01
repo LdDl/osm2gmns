@@ -1,4 +1,4 @@
-package osm2gmns
+package types
 
 type LinkType uint16
 
@@ -26,8 +26,8 @@ func (iotaIdx LinkType) String() string {
 }
 
 type linkComposition struct {
-	linkType           LinkType
-	linkConnectionType LinkConnectionType
+	LinkType           LinkType
+	LinkConnectionType LinkConnectionType
 }
 
 var (
@@ -91,3 +91,10 @@ var (
 		LINK_CONNECTOR:    9999,
 	}
 )
+
+func NewOnewayDefault(lt LinkType) bool {
+	if found, ok := onewayDefaultByLink[lt]; ok {
+		return found
+	}
+	return false
+}

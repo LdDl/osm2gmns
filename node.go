@@ -1,15 +1,20 @@
 package osm2gmns
 
 import (
+	"github.com/LdDl/osm2gmns/types"
 	"github.com/paulmach/osm"
 )
 
 type Node struct {
 	node        osm.Node
 	name        string
-	highway     string
+	osmData     NodeOSMInfo
 	ID          osm.NodeID
 	useCount    int
-	controlType ControlType
+	controlType types.ControlType
 	isCrossing  bool
+}
+
+type NodeOSMInfo struct {
+	highway string
 }

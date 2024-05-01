@@ -1,4 +1,4 @@
-package osm2gmns
+package types
 
 type LinkConnectionType uint16
 
