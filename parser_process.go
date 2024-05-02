@@ -11,19 +11,19 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (osmData *OSMWaysNodes) GenerateMacroscopic(poi bool) error {
+func (osmData *OSMWaysNodes) GenerateMacroscopic(poi bool) (*macro.Net, error) {
 	ways, nodesSet, allowedAgentTypes := osmData.ways, osmData.nodes, osmData.allowedAgentTypes
 	preparedWays, err := prepareWays(ways, nodesSet, allowedAgentTypes)
 	if err != nil {
-		return errors.Wrap(err, "Can't prepare ways")
+		return nil, errors.Wrap(err, "Can't prepare ways")
 	}
 	preparedNodes, err := prepareNodes(nodesSet)
 	if err != nil {
-		return errors.Wrap(err, "Can't prepare nodes")
+		return nil, errors.Wrap(err, "Can't prepare nodes")
 	}
 	err = markPureCycles(preparedNodes, preparedWays)
 	if err != nil {
-		return errors.Wrap(err, "Can't mark pure cycles")
+		return nil, errors.Wrap(err, "Can't mark pure cycles")
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Msg("Preparing macroscopic network")
@@ -31,14 +31,12 @@ func (osmData *OSMWaysNodes) GenerateMacroscopic(poi bool) error {
 	st := time.Now()
 	macroNet, err := macro.NewNetFromOSM(preparedWays, preparedNodes)
 	if err != nil {
-		return errors.Wrap(err, "Can't prepare macroscopic network")
+		return nil, errors.Wrap(err, "Can't prepare macroscopic network")
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing macroscopic network done!")
 	}
-	// @todo
-	panic("Check net")
-	return nil
+	return macroNet, nil
 }
 
 // prepareNodes examines nodes which has use count > 0 and use count > 2 on being cross

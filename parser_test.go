@@ -22,10 +22,13 @@ func TestParser(t *testing.T) {
 		return
 	}
 
-	err = osmData.GenerateMacroscopic(parser.preparePOI)
+	macroNet, err := osmData.GenerateMacroscopic(parser.preparePOI)
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	_ = macroNet
+	// @todo
+	panic("Generate activity types, generate movement")
 	// t.Error(0)
 }
