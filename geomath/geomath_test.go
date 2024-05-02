@@ -1,4 +1,4 @@
-package osm2gmns
+package geomath
 
 import (
 	"fmt"

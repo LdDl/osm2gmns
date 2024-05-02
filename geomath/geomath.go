@@ -1,4 +1,4 @@
-package osm2gmns
+package geomath
 
 import (
 	"fmt"
@@ -25,15 +25,15 @@ func epsg4326To3857(lon, lat float64) (float64, float64) {
 	return x, y
 }
 
-func pointToEuclidean(pt orb.Point) orb.Point {
+func PointToEuclidean(pt orb.Point) orb.Point {
 	euclideanX, euclideanY := epsg4326To3857(pt.Lon(), pt.Lat())
 	return orb.Point{euclideanX, euclideanY}
 }
 
-func lineToEuclidean(line orb.LineString) orb.LineString {
+func LineToEuclidean(line orb.LineString) orb.LineString {
 	newLine := make(orb.LineString, len(line))
 	for i, pt := range line {
-		newLine[i] = pointToEuclidean(pt)
+		newLine[i] = PointToEuclidean(pt)
 	}
 	return newLine
 }

@@ -11,12 +11,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (data *OSMWaysNodes) prepareNetwork(allowedAgentTypes []types.AgentType, poi bool) error {
-	preparedWays, err := prepareWays(data.ways, data.nodes, allowedAgentTypes)
+func (osmData *OSMWaysNodes) GenerateMacroscopic(poi bool) error {
+	ways, nodesSet, allowedAgentTypes := osmData.ways, osmData.nodes, osmData.allowedAgentTypes
+	preparedWays, err := prepareWays(ways, nodesSet, allowedAgentTypes)
 	if err != nil {
 		return errors.Wrap(err, "Can't prepare ways")
 	}
-	preparedNodes, err := prepareNodes(data.nodes)
+	preparedNodes, err := prepareNodes(nodesSet)
 	if err != nil {
 		return errors.Wrap(err, "Can't prepare nodes")
 	}
@@ -24,7 +25,6 @@ func (data *OSMWaysNodes) prepareNetwork(allowedAgentTypes []types.AgentType, po
 	if err != nil {
 		return errors.Wrap(err, "Can't mark pure cycles")
 	}
-	// @todo: implement constructor for macro network
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Msg("Preparing macroscopic network")
 	}
@@ -37,7 +37,7 @@ func (data *OSMWaysNodes) prepareNetwork(allowedAgentTypes []types.AgentType, po
 		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing macroscopic network done!")
 	}
 	// @todo
-	panic("Evaluate euclidean geometries for links and nodes")
+	panic("Check net")
 	return nil
 }
 

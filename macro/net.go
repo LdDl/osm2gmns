@@ -44,7 +44,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			if nID, ok := observed[sourceNodeID]; !ok {
 				sourceNode, ok := nodesSet[sourceNodeID]
 				if !ok {
-					return nil, fmt.Errorf("No such source node '%d'. Way ID: '%d'", sourceNodeID, way.ID)
+					return nil, fmt.Errorf("no such source node '%d'. Way ID: '%d'", sourceNodeID, way.ID)
 				}
 				nodes[lastNodeID] = NewNodeFrom(lastNodeID, sourceNode)
 				observed[sourceNodeID] = lastNodeID
@@ -57,7 +57,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			if nID, ok := observed[targetNodeID]; !ok {
 				targetNode, ok := nodesSet[targetNodeID]
 				if !ok {
-					return nil, fmt.Errorf("No such target node '%d'. Way ID: '%d'", targetNodeID, way.ID)
+					return nil, fmt.Errorf("no such target node '%d'. Way ID: '%d'", targetNodeID, way.ID)
 				}
 				nodes[lastNodeID] = NewNodeFrom(lastNodeID, targetNode)
 				observed[targetNodeID] = lastNodeID

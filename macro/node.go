@@ -1,6 +1,7 @@
 package macro
 
 import (
+	"github.com/LdDl/osm2gmns/geomath"
 	"github.com/LdDl/osm2gmns/movement"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
@@ -52,6 +53,6 @@ func NewNodeFrom(id NodeID, node *wrappers.NodeOSM) *Node {
 		geom:             node.InnerNode.Point(),
 		movementIsNeeded: true, // Consider all nodes as intersections by default
 	}
-
+	newNode.geomEuclidean = geomath.PointToEuclidean(newNode.geom)
 	return &newNode
 }

@@ -16,13 +16,13 @@ func TestParser(t *testing.T) {
 	)
 	t.Log(parser)
 
-	osmData, err := readOSM(parser.filename, parser.preparePOI)
+	osmData, err := parser.ReadOSM()
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = osmData.prepareNetwork(parser.allowedAgentTypes, parser.preparePOI)
+	err = osmData.GenerateMacroscopic(parser.preparePOI)
 	if err != nil {
 		t.Error(err)
 		return

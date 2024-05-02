@@ -3,6 +3,7 @@ package macro
 import (
 	"math"
 
+	"github.com/LdDl/osm2gmns/geomath"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/orb"
@@ -160,6 +161,7 @@ func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, 
 		panic("Should not happen!")
 	}
 	link.lengthMeters = geo.LengthHaversine(link.geom)
+	link.geomEuclidean = geomath.LineToEuclidean(link.geom)
 
 	return &link
 }

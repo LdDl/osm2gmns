@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"
@@ -16,7 +17,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func readOSM(filename string, poi bool) (*OSMWaysNodes, error) {
+func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
+	filename, poi := parser.filename, parser.preparePOI
+	_ = poi
 	if VERBOSE {
 		log.Info().Str("scope", "osm_read").Str("filename", filename).Msg("Opening file")
 	}
@@ -128,8 +131,13 @@ func readOSM(filename string, poi bool) (*OSMWaysNodes, error) {
 		log.Info().Str("scope", "osm_read").Int("ways_num", len(ways)).Msg("")
 		log.Info().Str("scope", "osm_read").Int("nodes_num", len(nodes)).Msg("")
 	}
-	return &OSMWaysNodes{
-		ways:  ways,
-		nodes: nodes,
-	}, nil
+
+	osmData := &OSMWaysNodes{
+		ways:              ways,
+		nodes:             nodes,
+		allowedAgentTypes: make([]types.AgentType, len(parser.allowedAgentTypes)),
+	}
+	copy(osmData.allowedAgentTypes, parser.allowedAgentTypes)
+
+	return osmData, nil
 }
