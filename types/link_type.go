@@ -90,6 +90,26 @@ var (
 		LINK_UNCLASSIFIED: 800,
 		LINK_CONNECTOR:    9999,
 	}
+
+	// it IS bad ranking currently. Need to research correct ranking
+	priorityRank = map[LinkType]int{
+		LINK_UNDEFINED:     0,
+		LINK_MOTORWAY:      15,
+		LINK_TRUNK:         14,
+		LINK_PRIMARY:       13,
+		LINK_SECONDARY:     12,
+		LINK_TERTIARY:      11,
+		LINK_RESIDENTIAL:   10,
+		LINK_LIVING_STREET: 9,
+		LINK_SERVICE:       8,
+		LINK_CYCLEWAY:      7,
+		LINK_FOOTWAY:       6,
+		LINK_TRACK:         5,
+		LINK_UNCLASSIFIED:  4,
+		LINK_CONNECTOR:     3,
+		LINK_RAILWAY:       2,
+		LINK_AEROWAY:       1,
+	}
 )
 
 func NewOnewayDefault(lt LinkType) bool {
@@ -118,4 +138,16 @@ func NewLanesDefault(lt LinkType) int {
 		return defaultLanes
 	}
 	return -1
+}
+
+func FindPriorLinkType(linkTypes []LinkType) LinkType {
+	maxPriority := -1
+	var maxPriorityLink LinkType
+	for _, linkType := range linkTypes {
+		if priority, ok := priorityRank[linkType]; ok && priority > maxPriority {
+			maxPriority = priority
+			maxPriorityLink = linkType
+		}
+	}
+	return maxPriorityLink
 }

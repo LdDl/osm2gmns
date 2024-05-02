@@ -119,8 +119,7 @@ func prepareSegments(way *wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Nod
 }
 
 // genBoundaryAndActivityType updated BoundaryType, ActivityType, ActivityLinkType for nodes
-// Be aware: this is not stable method because of cases when counters for acitivites is equal.
-// @todo: make prioritization across activities
+// In case when counters for acitivites are equal prioritization will be used
 func (net *Net) genBoundaryAndActivityType() error {
 	nodesLinkTypesCounters := make(map[NodeID]map[types.LinkType]int)
 	for i := range net.Links {
@@ -159,18 +158,20 @@ func (net *Net) genBoundaryAndActivityType() error {
 			node.activityLinkType = types.LINK_UNDEFINED
 		}
 		if linkTypesCounters, ok := nodesLinkTypesCounters[nodeID]; ok {
-			maxLinkType := types.LINK_UNDEFINED
+			maxLinkTypes := []types.LinkType{}
 			maxLinkTypeCount := 0
 			for linkType, counter := range linkTypesCounters {
 				if counter > maxLinkTypeCount {
 					maxLinkTypeCount = counter
-					maxLinkType = linkType
+					maxLinkTypes = []types.LinkType{linkType}
+				} else if counter == maxLinkTypeCount {
+					maxLinkTypes = append(maxLinkTypes, linkType)
 				}
 			}
-			// @TODO: What to do when there are several link types with the same max count?
-			if maxLinkType > 0 {
+			if maxLinkTypeCount > 0 {
 				node.activityType = types.ACTIVITY_LINK
-				node.activityLinkType = maxLinkType
+				// When there are several link types pick the one with highest rank
+				node.activityLinkType = types.FindPriorLinkType(maxLinkTypes)
 			} else {
 				node.activityType = types.ACTIVITY_NONE
 				node.activityLinkType = types.LINK_UNDEFINED
