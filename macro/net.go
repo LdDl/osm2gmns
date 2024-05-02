@@ -3,6 +3,7 @@ package macro
 import (
 	"fmt"
 
+	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/pkg/errors"
@@ -86,7 +87,9 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 		}
 	}
 
-	return &Net{Nodes: nodes, Links: links}, nil
+	net := &Net{Nodes: nodes, Links: links}
+	net.genBoundaryAndActivityType()
+	return net, nil
 }
 
 func prepareSegments(way *wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM) (segments [][]osm.NodeID, err error) {
@@ -113,4 +116,98 @@ func prepareSegments(way *wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Nod
 		}
 	}
 	return segments, nil
+}
+
+// genBoundaryAndActivityType updated BoundaryType, ActivityType, ActivityLinkType for nodes
+// Be aware: this is not stable method because of cases when counters for acitivites is equal.
+// @todo: make prioritization across activities
+func (net *Net) genBoundaryAndActivityType() error {
+	nodesLinkTypesCounters := make(map[NodeID]map[types.LinkType]int)
+	for i := range net.Links {
+		link := net.Links[i]
+		sourceNodeID := link.sourceNodeID
+		if _, ok := net.Nodes[sourceNodeID]; !ok {
+			return fmt.Errorf("no source node with ID '%d'. Link ID: '%d'", sourceNodeID, link.ID)
+		}
+		if _, ok := nodesLinkTypesCounters[sourceNodeID]; !ok {
+			nodesLinkTypesCounters[sourceNodeID] = make(map[types.LinkType]int)
+		}
+		if _, ok := nodesLinkTypesCounters[sourceNodeID][link.linkType]; !ok {
+			nodesLinkTypesCounters[sourceNodeID][link.linkType] = 1
+		} else {
+			nodesLinkTypesCounters[sourceNodeID][link.linkType]++
+		}
+
+		targetNodeID := link.targetNodeID
+		if _, ok := net.Nodes[targetNodeID]; !ok {
+			return fmt.Errorf("no target node with ID '%d'. Link ID: '%d'", targetNodeID, link.ID)
+		}
+		if _, ok := nodesLinkTypesCounters[targetNodeID]; !ok {
+			nodesLinkTypesCounters[targetNodeID] = make(map[types.LinkType]int)
+		}
+		if _, ok := nodesLinkTypesCounters[targetNodeID][link.linkType]; !ok {
+			nodesLinkTypesCounters[targetNodeID][link.linkType] = 1
+		} else {
+			nodesLinkTypesCounters[targetNodeID][link.linkType]++
+		}
+	}
+
+	for nodeID := range net.Nodes {
+		node := net.Nodes[nodeID]
+		if node.poiID > -1 {
+			node.activityType = types.ACTIVITY_POI
+			node.activityLinkType = types.LINK_UNDEFINED
+		}
+		if linkTypesCounters, ok := nodesLinkTypesCounters[nodeID]; ok {
+			maxLinkType := types.LINK_UNDEFINED
+			maxLinkTypeCount := 0
+			for linkType, counter := range linkTypesCounters {
+				if counter > maxLinkTypeCount {
+					maxLinkTypeCount = counter
+					maxLinkType = linkType
+				}
+			}
+			// @TODO: What to do when there are several link types with the same max count?
+			if maxLinkType > 0 {
+				node.activityType = types.ACTIVITY_LINK
+				node.activityLinkType = maxLinkType
+			} else {
+				node.activityType = types.ACTIVITY_NONE
+				node.activityLinkType = types.LINK_UNDEFINED
+			}
+		}
+	}
+
+	for nodeID := range net.Nodes {
+		node := net.Nodes[nodeID]
+		node.boundaryType = types.BOUNDARY_NONE
+		if node.activityType == types.ACTIVITY_POI {
+			continue
+		}
+		if len(node.outcomingLinks) == 0 {
+			node.boundaryType = types.BOUNDARY_INCOME_ONLY
+		} else if len(node.incomingLinks) == 0 {
+			node.boundaryType = types.BOUNDARY_OUTCOME_ONLY
+		} else if len(node.incomingLinks) == 1 && (len(node.outcomingLinks) == 1) {
+			incomingLink, ok := net.Links[node.incomingLinks[0]]
+			if !ok {
+				return fmt.Errorf("no incoming link with ID '%d'. Node ID: '%d'", node.incomingLinks[0], node.ID)
+			}
+			outcomingLink, ok := net.Links[node.outcomingLinks[0]]
+			if !ok {
+				return fmt.Errorf("no incoming link with ID '%d'. Node ID: '%d'", node.outcomingLinks[0], node.ID)
+			}
+			if incomingLink.sourceNodeID == outcomingLink.targetNodeID {
+				node.boundaryType = types.BOUNDARY_INCOME_OUTCOME
+			}
+		}
+	}
+	for nodeID := range net.Nodes {
+		node := net.Nodes[nodeID]
+		if node.boundaryType == types.BOUNDARY_NONE {
+			continue
+		}
+		node.zoneID = node.ID
+	}
+	return nil
 }
