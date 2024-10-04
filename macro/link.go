@@ -43,7 +43,7 @@ type Link struct {
 
 	wasBidirectional bool
 
-	lanesNew int
+	lanesNum int
 	/* For Mesoscopic and Microscopic */
 	mesolinks              []LinkID
 	lanesList              []int
@@ -108,31 +108,31 @@ func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, 
 		link.wasBidirectional = true
 	}
 	if way.IsOneWay {
-		link.lanesNew = way.Tags.Lanes
+		link.lanesNum = way.Tags.Lanes
 	} else {
 		switch direction {
 		case DIRECTION_FORWARD:
 			if way.Tags.LanesForward > 0 {
-				link.lanesNew = way.Tags.LanesForward
+				link.lanesNum = way.Tags.LanesForward
 			} else if way.Tags.Lanes > 0 {
-				link.lanesNew = int(math.Ceil(float64(way.Tags.Lanes) / 2.0))
+				link.lanesNum = int(math.Ceil(float64(way.Tags.Lanes) / 2.0))
 			} else {
-				link.lanesNew = way.Tags.Lanes
+				link.lanesNum = way.Tags.Lanes
 			}
 		case DIRECTION_BACKWARD:
 			if way.Tags.LanesBackward >= 0 {
-				link.lanesNew = way.Tags.LanesBackward
+				link.lanesNum = way.Tags.LanesBackward
 			} else if way.Tags.Lanes >= 0 {
-				link.lanesNew = int(math.Ceil(float64(way.Tags.Lanes) / 2.0))
+				link.lanesNum = int(math.Ceil(float64(way.Tags.Lanes) / 2.0))
 			} else {
-				link.lanesNew = way.Tags.Lanes
+				link.lanesNum = way.Tags.Lanes
 			}
 		default:
 			panic("Should not happen!")
 		}
 	}
-	if link.lanesNew <= 0 {
-		link.lanesNew = types.NewLanesDefault(link.linkType)
+	if link.lanesNum <= 0 {
+		link.lanesNum = types.NewLanesDefault(link.linkType)
 	}
 
 	// Walk all segment nodes except the first and the last one to detect links under traffic light control
