@@ -46,7 +46,7 @@ type Link struct {
 	lanesNum int
 	/* For Mesoscopic and Microscopic */
 	mesolinks              []LinkID
-	lanesInfo              *LanesInfo
+	lanesInfo              LanesInfo
 	lanesListCut           []int
 	lanesChangeCut         [][2]int
 	geomOffset             orb.LineString
@@ -63,6 +63,21 @@ type Link struct {
 
 	upstreamCutLen   float64
 	downstreamCutLen float64
+}
+
+func (link *Link) GetIncomingLanes() int {
+	if len(link.lanesInfo.LanesList) == 0 {
+		return 0
+	}
+	return link.lanesInfo.LanesList[0]
+}
+
+func (link *Link) GetOutcomingLanes() int {
+	idx := len(link.lanesInfo.LanesList) - 1
+	if idx < 0 {
+		return -1
+	}
+	return link.lanesInfo.LanesList[idx]
 }
 
 func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {

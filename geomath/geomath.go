@@ -51,10 +51,10 @@ func lineToSpherical(line orb.LineString) orb.LineString {
 	return newLine
 }
 
-// angleBetweenLines returs angle between two lines
+// AngleBetweenLines returs angle between two lines
 //
 // Note: panics if number of points in any line is less than 2
-func angleBetweenLines(l1 orb.LineString, l2 orb.LineString) float64 {
+func AngleBetweenLines(l1 orb.LineString, l2 orb.LineString) float64 {
 	angle1 := math.Atan2(l1[len(l1)-1].Y()-l1[0].Y(), l1[len(l1)-1].X()-l1[0].X())
 	angle2 := math.Atan2(l2[len(l2)-1].Y()-l2[0].Y(), l2[len(l2)-1].X()-l2[0].X())
 	angle := angle2 - angle1

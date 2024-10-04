@@ -14,8 +14,8 @@ type LanesInfo struct {
 	LanesChangePoints []float64
 }
 
-func NewLanesInfo(link *Link) *LanesInfo {
-	lanesInfo := &LanesInfo{
+func NewLanesInfo(link *Link) LanesInfo {
+	lanesInfo := LanesInfo{
 		LanesList:         make([]int, 0),
 		LanesChange:       make([][2]int, 0),
 		LanesChangePoints: make([]float64, 0),

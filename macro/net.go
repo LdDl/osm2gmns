@@ -9,6 +9,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	ErrLinkNotFound = fmt.Errorf("Link not found")
+)
+
 type Net struct {
 	Nodes map[NodeID]*Node
 	Links map[LinkID]*Link
