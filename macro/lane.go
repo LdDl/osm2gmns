@@ -20,10 +20,10 @@ func NewLanesInfo(link *Link) *LanesInfo {
 		LanesChange:       make([][2]int, 0),
 		LanesChangePoints: make([]float64, 0),
 	}
-	lanesChangePointsTemp := []float64{0.0, link.lengthMeters}
 	if link.lengthMeters < resolution {
 		lanesInfo.LanesChangePoints = []float64{0.0, link.lengthMeters}
 	} else {
+		lanesChangePointsTemp := []float64{0.0, link.lengthMeters}
 		for len(lanesChangePointsTemp) != 0 {
 			target := lanesChangePointsTemp[0]
 			remove := make(map[int]struct{})
