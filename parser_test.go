@@ -29,6 +29,6 @@ func TestParser(t *testing.T) {
 	}
 	_ = macroNet
 	// @todo
-	panic("Generate activity types, generate movement")
+	panic("Generate movement")
 	// t.Error(0)
 }

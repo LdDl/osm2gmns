@@ -46,10 +46,8 @@ type Link struct {
 	lanesNum int
 	/* For Mesoscopic and Microscopic */
 	mesolinks              []LinkID
-	lanesList              []int
+	lanesInfo              *LanesInfo
 	lanesListCut           []int
-	lanesChangePoints      []float64
-	lanesChange            [][2]int
 	lanesChangeCut         [][2]int
 	geomOffset             orb.LineString
 	geomOffsetCut          []orb.LineString
@@ -86,7 +84,6 @@ func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, 
 
 	link := Link{
 		name:               way.Tags.Name,
-		lanesList:          make([]int, 0),
 		freeSpeed:          freeSpeed,
 		maxSpeed:           maxSpeed,
 		capacity:           capacity,
@@ -163,5 +160,7 @@ func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, 
 	link.lengthMeters = geo.LengthHaversine(link.geom)
 	link.geomEuclidean = geomath.LineToEuclidean(link.geom)
 
+	// Prepare lanes information
+	link.lanesInfo = NewLanesInfo(&link)
 	return &link
 }
