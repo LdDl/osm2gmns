@@ -4,14 +4,18 @@ import (
 	"math"
 
 	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/geo"
+)
+
+const (
+	indentationThreshold = 8.0
 )
 
 // FindMovementType extracts movement description. Possible descriptions are northbound left (NBL), northbound through (NBT), westbound left (WBL), westbound through (WBT), southbound left (SBL), southbound through (SBT), eastbound left (EBL) and eastbound through (EBT) movements;
-// ibLine - The line with coordinates in EPSG:4326. Line represents source of movement;
-// obLine - The line with coordinates in EPSG:4326. Line represents target of movement;
-//
-// Returns one of corresponding values: NBL, NBT, NBR, NBU, SBL, SBT, SBR, SBU, EBL, EBT, EBR, EBU, WBL, WBT, WBR, WBU along with corresponding movement with possible values: thru, right, left, uturn
-// Notice: use it for Euclidean space only (or EPSG:3857)
+// ibLine - The line with coordinates in EPSG:3857. Line represents source of movement;
+// obLine - The line with coordinates in EPSG:3857. Line represents target of movement;
+// Returns one of corresponding values: NBL, NBT, NBR, NBU, SBL, SBT, SBR, SBU, EBL, EBT, EBR, EBU, WBL, WBT, WBR, WBU along with corresponding movement with possible values: thru, right, left, uturn;
+// Notice: use it for Euclidean space only (or EPSG:3857).
 func FindMovementType(ibLine orb.LineString, obLine orb.LineString) (MovementCompositeType, MovementType) {
 	startIB, endIB := ibLine[0], ibLine[len(ibLine)-1]
 	endOB := obLine[len(obLine)-1]
@@ -58,4 +62,26 @@ func FindMovementType(ibLine orb.LineString, obLine orb.LineString) (MovementCom
 	}
 
 	return movementTextIDsMatch[direction.String()+movementShortType.String()], movementType
+}
+
+// FindMovementGeom returns movement geometry for given lines pair;
+// ibLine - The line represents source of movement;
+// obLine - The line represents target of movement;
+// Notice: panics if number of points in any line is less than 2.
+func FindMovementGeom(ibLine orb.LineString, obLine orb.LineString) orb.LineString {
+	indentIB := indentationThreshold
+	lengthIB := geo.Length(ibLine)
+	if lengthIB <= indentIB {
+		indentIB = lengthIB / 2.0
+	}
+	pointIB, _ := geo.PointAtDistanceAlongLine(ibLine, lengthIB-indentIB) // Ident from link end
+
+	indentOB := indentationThreshold
+	lengthOB := geo.Length(obLine)
+	if lengthOB <= indentOB {
+		indentOB = lengthOB / 2.0
+	}
+
+	pointOB, _ := geo.PointAtDistanceAlongLine(obLine, indentOB)
+	return orb.LineString{pointIB, pointOB}
 }

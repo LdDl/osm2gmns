@@ -1,6 +1,7 @@
 package movement
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LdDl/osm2gmns/geomath"
@@ -8,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetMovementType(t *testing.T) {
+func TestFindMovementType(t *testing.T) {
 	// should return NBL (movement ID - 31, ib - 21, ob - 9)
 	givenInboundLine := geomath.LineToEuclidean(orb.LineString([]orb.Point{{36.12687689999999918, 52.97880310000000037}, {36.12666420000000045, 52.97901970000000205}, {36.12655029999999812, 52.97914080000000325}, {36.12633389999999878, 52.97951309999999836}, {36.12644790000000228, 52.97972719999999924}, {36.12617269999999792, 52.98006380000000348}, {36.12591199999999958, 52.98028130000000147}, {36.12566470000000152, 52.98060569999999814}, {36.1256758999999974, 52.98077049999999844}, {36.12550180000000211, 52.98099280000000277}, {36.12535739999999862, 52.98109339999999889}, {36.12520870000000173, 52.98136800000000335}, {36.12476730000000202, 52.9816525000000027}, {36.12474199999999769, 52.98177170000000302}, {36.12476999999999805, 52.98198190000000096}, {36.12384109999999993, 52.98328839999999929}, {36.12374100000000254, 52.98351069999999652}, {36.12317699999999832, 52.98426740000000024}, {36.12142579999999725, 52.98677949999999726}}))
 	givenOutboundLine := geomath.LineToEuclidean(orb.LineString([]orb.Point{{36.12142579999999725, 52.98677949999999726}, {36.12084130000000215, 52.98640280000000047}, {36.12050210000000305, 52.98620780000000252}}))
@@ -140,4 +141,32 @@ func TestGetMovementType(t *testing.T) {
 	ansMovementTextID, ansMovementType = FindMovementType(givenInboundLine, givenOutboundLine)
 	assert.Equal(t, expectedMovementTextID, ansMovementTextID, "Wrong movement text ID")
 	assert.Equal(t, expectedMovementType, ansMovementType, "Wrong movement type")
+}
+
+func TestFindMovementGeom(t *testing.T) {
+	precision := 10e-8
+
+	// Check movement with ID 31 (ib - 21, ob - 9)
+	givenInboundLine := orb.LineString([]orb.Point{{36.12687689999999918, 52.97880310000000037}, {36.12666420000000045, 52.97901970000000205}, {36.12655029999999812, 52.97914080000000325}, {36.12633389999999878, 52.97951309999999836}, {36.12644790000000228, 52.97972719999999924}, {36.12617269999999792, 52.98006380000000348}, {36.12591199999999958, 52.98028130000000147}, {36.12566470000000152, 52.98060569999999814}, {36.1256758999999974, 52.98077049999999844}, {36.12550180000000211, 52.98099280000000277}, {36.12535739999999862, 52.98109339999999889}, {36.12520870000000173, 52.98136800000000335}, {36.12476730000000202, 52.9816525000000027}, {36.12474199999999769, 52.98177170000000302}, {36.12476999999999805, 52.98198190000000096}, {36.12384109999999993, 52.98328839999999929}, {36.12374100000000254, 52.98351069999999652}, {36.12317699999999832, 52.98426740000000024}, {36.12142579999999725, 52.98677949999999726}})
+	givenOutboundLine := orb.LineString([]orb.Point{{36.12142579999999725, 52.98677949999999726}, {36.12084130000000215, 52.98640280000000047}, {36.12050210000000305, 52.98620780000000252}})
+	expectedMovementGeom := orb.LineString([]orb.Point{{36.12147199999999714, 52.98671319999999696}, {36.12134429999999696, 52.98672700000000191}})
+	ansMovementGeom := FindMovementGeom(givenInboundLine, givenOutboundLine)
+	assert.Equal(t, len(expectedMovementGeom), len(ansMovementGeom), "Incorrect number of points in movement geometry")
+	for i := range ansMovementGeom {
+		pt := ansMovementGeom[i]
+		assert.InDelta(t, expectedMovementGeom[i][0], pt[0], precision, fmt.Sprintf("Wrong X (longitude) in EPSG:3857 at pos #%d", i))
+		assert.InDelta(t, expectedMovementGeom[i][1], pt[1], precision, fmt.Sprintf("Wrong Y (latitude) in EPSG:3857 at pos #%d", i))
+	}
+
+	// Check movement with ID 17 (ib - 5, ob - 31)
+	givenInboundLine = orb.LineString([]orb.Point{{36.11710870000000284, 52.98622540000000214}, {36.11705160000000348, 52.9862694999999988}, {36.11700419999999667, 52.98630649999999775}})
+	givenOutboundLine = orb.LineString([]orb.Point{{36.11700419999999667, 52.98630649999999775}, {36.11690120000000093, 52.98640089999999958}})
+	expectedMovementGeom = orb.LineString([]orb.Point{{36.11707729999999827, 52.98624970000000189}, {36.11693869999999862, 52.98636659999999665}})
+	ansMovementGeom = FindMovementGeom(givenInboundLine, givenOutboundLine)
+	assert.Equal(t, len(expectedMovementGeom), len(ansMovementGeom), "Incorrect number of points in movement geometry")
+	for i := range ansMovementGeom {
+		pt := ansMovementGeom[i]
+		assert.InDelta(t, expectedMovementGeom[i][0], pt[0], precision, fmt.Sprintf("Wrong X (longitude) in EPSG:3857 at pos #%d", i))
+		assert.InDelta(t, expectedMovementGeom[i][1], pt[1], precision, fmt.Sprintf("Wrong Y (latitude) in EPSG:3857 at pos #%d", i))
+	}
 }
