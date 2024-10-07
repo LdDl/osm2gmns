@@ -38,15 +38,15 @@ func LineToEuclidean(line orb.LineString) orb.LineString {
 	return newLine
 }
 
-func pointToSpherical(pt orb.Point) orb.Point {
+func PointToSpherical(pt orb.Point) orb.Point {
 	sphericalX, sphericalY := epsg3857To4326(pt.X(), pt.Y())
 	return orb.Point{sphericalX, sphericalY}
 }
 
-func lineToSpherical(line orb.LineString) orb.LineString {
+func LineToSpherical(line orb.LineString) orb.LineString {
 	newLine := make(orb.LineString, len(line))
 	for i, pt := range line {
-		newLine[i] = pointToSpherical(pt)
+		newLine[i] = PointToSpherical(pt)
 	}
 	return newLine
 }

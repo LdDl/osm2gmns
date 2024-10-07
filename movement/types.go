@@ -1,10 +1,28 @@
 package movement
 
 var (
-	movementsTypes      = []string{"undefined", "thru", "right", "left", "uturn"}
-	movementsShortTypes = []string{"undefined", "T", "R", "L", "U"}
-	directionTypes      = []string{"undefined", "SB", "EB", "NB", "WB"}
-	movementsTextIDs    = []string{"undefined", "SBT", "SBR", "SBL", "SBU", "EBT", "EBR", "EBL", "EBU", "NBT", "NBR", "NBL", "NBU", "WBT", "WBR", "WBL", "WBU"}
+	movementsTypes       = []string{"undefined", "thru", "right", "left", "uturn"}
+	movementsShortTypes  = []string{"undefined", "T", "R", "L", "U"}
+	directionTypes       = []string{"undefined", "SB", "EB", "NB", "WB"}
+	movementsTextIDs     = []string{"undefined", "SBT", "SBR", "SBL", "SBU", "EBT", "EBR", "EBL", "EBU", "NBT", "NBR", "NBL", "NBU", "WBT", "WBR", "WBL", "WBU"}
+	movementTextIDsMatch = map[string]MovementCompositeType{
+		"SBT": MOVEMENT_SBT,
+		"SBR": MOVEMENT_SBR,
+		"SBL": MOVEMENT_SBL,
+		"SBU": MOVEMENT_SBU,
+		"EBT": MOVEMENT_EBT,
+		"EBR": MOVEMENT_EBR,
+		"EBL": MOVEMENT_EBL,
+		"EBU": MOVEMENT_EBU,
+		"NBT": MOVEMENT_NBT,
+		"NBR": MOVEMENT_NBR,
+		"NBL": MOVEMENT_NBL,
+		"NBU": MOVEMENT_NBU,
+		"WBT": MOVEMENT_WBT,
+		"WBR": MOVEMENT_WBR,
+		"WBL": MOVEMENT_WBL,
+		"WBU": MOVEMENT_WBU,
+	}
 )
 
 type MovementType uint16
