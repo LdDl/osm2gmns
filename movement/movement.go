@@ -1,6 +1,8 @@
 package movement
 
-import "sync"
+import (
+	"sync"
+)
 
 type autoInc struct {
 	sync.Mutex

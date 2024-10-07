@@ -45,3 +45,32 @@ func NewLanesInfo(link *Link) LanesInfo {
 	}
 	return lanesInfo
 }
+
+func laneIndices(lanes int, lanesChangeLeft int, lanesChangeRight int) []int {
+	if lanes < lanesChangeLeft || lanes < lanesChangeRight {
+		return make([]int, 0)
+	}
+	laneIndices := make([]int, lanes)
+	for i := 1; i <= lanes; i++ {
+		laneIndices[i-1] = i
+	}
+	if lanesChangeLeft < 0 {
+		laneIndices = laneIndices[-lanesChangeLeft:]
+	} else if lanesChangeLeft > 0 {
+		left := make([]int, lanesChangeLeft)
+		for i := range left {
+			left[i] = -lanesChangeLeft + i
+		}
+		laneIndices = append(left, laneIndices...)
+	}
+	if lanesChangeRight < 0 {
+		laneIndices = laneIndices[:lanes+lanesChangeRight]
+	} else if lanesChangeRight > 0 {
+		right := make([]int, lanesChangeRight)
+		for i := range right {
+			right[i] = lanes + 1 + i
+		}
+		laneIndices = append(laneIndices, right...)
+	}
+	return laneIndices
+}

@@ -1,6 +1,7 @@
 package macro
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/LdDl/osm2gmns/geomath"
@@ -78,6 +79,16 @@ func (link *Link) GetOutcomingLanes() int {
 		return -1
 	}
 	return link.lanesInfo.LanesList[idx]
+}
+
+func (link *Link) GetOutcomingLaneIndices() []int {
+	lanesInfo := link.lanesInfo
+	idx := len(lanesInfo.LanesChange) - 1
+	if idx < 0 {
+		fmt.Printf("[WARNING]: Macroscopic link %d has no lanes change", link.ID)
+		return make([]int, 0)
+	}
+	return laneIndices(link.lanesNum, lanesInfo.LanesChange[idx][0], lanesInfo.LanesChange[idx][1])
 }
 
 func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {
