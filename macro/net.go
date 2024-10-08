@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LdDl/osm2gmns/gmns"
+	"github.com/LdDl/osm2gmns/movement"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
@@ -216,4 +217,20 @@ func (net *Net) genBoundaryAndActivityType() error {
 		node.zoneID = node.ID
 	}
 	return nil
+}
+
+func (net *Net) GenerateMovements() (movement.MovementsStorage, error) {
+	ans := movement.NewMovementsStorage()
+	for i := range net.Nodes {
+		node := net.Nodes[i]
+		movements, err := node.FindMovements(net.Links)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Can't find movements for macro node with ID: '%d' (osm: '%d')", node.ID, node.osmNodeID)
+		}
+		for j := range movements {
+			mvmt := movements[j]
+			ans[mvmt.ID] = &mvmt
+		}
+	}
+	return ans, nil
 }
