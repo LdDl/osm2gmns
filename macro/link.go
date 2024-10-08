@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/LdDl/osm2gmns/geomath"
+	"github.com/LdDl/osm2gmns/gmns"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/orb"
@@ -19,8 +20,6 @@ const (
 	DIRECTION_BACKWARD
 )
 
-type LinkID int
-
 type Link struct {
 	name               string
 	geom               orb.LineString
@@ -29,15 +28,15 @@ type Link struct {
 	freeSpeed          float64
 	maxSpeed           float64
 	capacity           int
-	ID                 LinkID
+	ID                 gmns.LinkID
 	osmWayID           osm.WayID
 	linkClass          types.LinkClass
 	linkType           types.LinkType
 	linkConnectionType types.LinkConnectionType
 	controlType        types.ControlType
 	allowedAgentTypes  []types.AgentType
-	sourceNodeID       NodeID
-	targetNodeID       NodeID
+	sourceNodeID       gmns.NodeID
+	targetNodeID       gmns.NodeID
 
 	sourceOsmNodeID osm.NodeID
 	targetOsmNodeID osm.NodeID
@@ -46,7 +45,7 @@ type Link struct {
 
 	lanesNum int
 	/* For Mesoscopic and Microscopic */
-	mesolinks              []LinkID
+	mesolinks              []gmns.LinkID
 	lanesInfo              LanesInfo
 	lanesListCut           []int
 	lanesChangeCut         [][2]int
@@ -91,7 +90,7 @@ func (link *Link) GetOutcomingLaneIndices() []int {
 	return laneIndices(link.lanesNum, lanesInfo.LanesChange[idx][0], lanesInfo.LanesChange[idx][1])
 }
 
-func NewLinkFrom(id LinkID, sourceNodeID, targetNodeID NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {
+func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {
 	freeSpeed := -1.0
 	maxSpeed := -1.0
 	capacity := -1

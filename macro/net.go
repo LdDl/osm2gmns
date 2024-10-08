@@ -3,6 +3,7 @@ package macro
 import (
 	"fmt"
 
+	"github.com/LdDl/osm2gmns/gmns"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
@@ -14,18 +15,18 @@ var (
 )
 
 type Net struct {
-	Nodes map[NodeID]*Node
-	Links map[LinkID]*Link
+	Nodes map[gmns.NodeID]*Node
+	Links map[gmns.LinkID]*Link
 }
 
 func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM) (*Net, error) {
 
-	lastLinkID := LinkID(0)
-	lastNodeID := NodeID(0)
+	lastLinkID := gmns.LinkID(0)
+	lastNodeID := gmns.NodeID(0)
 
-	observed := make(map[osm.NodeID]NodeID)
-	nodes := make(map[NodeID]*Node)
-	links := make(map[LinkID]*Link)
+	observed := make(map[osm.NodeID]gmns.NodeID)
+	nodes := make(map[gmns.NodeID]*Node)
+	links := make(map[gmns.LinkID]*Link)
 
 	for i := range ways {
 		way := ways[i]
@@ -41,8 +42,8 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			if len(segment) < 2 {
 				continue
 			}
-			var currentSourceNodeID NodeID
-			var currentTargetNodeID NodeID
+			var currentSourceNodeID gmns.NodeID
+			var currentTargetNodeID gmns.NodeID
 
 			/* Create nodes */
 			sourceNodeID := segment[0]
@@ -125,7 +126,7 @@ func prepareSegments(way *wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Nod
 // genBoundaryAndActivityType updated BoundaryType, ActivityType, ActivityLinkType for nodes
 // In case when counters for acitivites are equal prioritization will be used
 func (net *Net) genBoundaryAndActivityType() error {
-	nodesLinkTypesCounters := make(map[NodeID]map[types.LinkType]int)
+	nodesLinkTypesCounters := make(map[gmns.NodeID]map[types.LinkType]int)
 	for i := range net.Links {
 		link := net.Links[i]
 		sourceNodeID := link.sourceNodeID

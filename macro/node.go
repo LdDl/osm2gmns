@@ -2,6 +2,7 @@ package macro
 
 import (
 	"github.com/LdDl/osm2gmns/geomath"
+	"github.com/LdDl/osm2gmns/gmns"
 	"github.com/LdDl/osm2gmns/movement"
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
@@ -9,17 +10,15 @@ import (
 	"github.com/paulmach/osm"
 )
 
-type NodeID int
-
 type Node struct {
-	incomingLinks    []LinkID
-	outcomingLinks   []LinkID
+	incomingLinks    []gmns.LinkID
+	outcomingLinks   []gmns.LinkID
 	name             string
 	osmHighway       string
-	ID               NodeID
+	ID               gmns.NodeID
 	osmNodeID        osm.NodeID
 	intersectionID   int
-	zoneID           NodeID
+	zoneID           gmns.NodeID
 	poiID            PoiID
 	controlType      types.ControlType
 	boundaryType     types.BoundaryType
@@ -36,10 +35,10 @@ type Node struct {
 	isCentroid bool
 }
 
-func NewNodeFrom(id NodeID, node *wrappers.NodeOSM) *Node {
+func NewNodeFrom(id gmns.NodeID, node *wrappers.NodeOSM) *Node {
 	newNode := Node{
-		incomingLinks:    make([]LinkID, 0),
-		outcomingLinks:   make([]LinkID, 0),
+		incomingLinks:    make([]gmns.LinkID, 0),
+		outcomingLinks:   make([]gmns.LinkID, 0),
 		activityType:     types.ACTIVITY_NONE,
 		name:             node.Name,
 		osmHighway:       node.OsmData.Highway,

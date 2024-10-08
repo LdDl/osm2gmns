@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/LdDl/osm2gmns/geomath"
+	"github.com/LdDl/osm2gmns/gmns"
 	"github.com/LdDl/osm2gmns/utils"
 )
 
@@ -14,7 +15,7 @@ func getIntersectionsConnections(incomingLink *Link, outcomingLinks []*Link) [][
 	for i, outLink := range outcomingLinks {
 		angles[i] = geomath.AngleBetweenLines(incomingLink.geomEuclidean, outLink.geomEuclidean)
 	}
-	indicesMap := make(map[LinkID]int, len(outcomingLinks))
+	indicesMap := make(map[gmns.LinkID]int, len(outcomingLinks))
 	for index := range outcomingLinks {
 		link := outcomingLinks[index]
 		indicesMap[link.ID] = index

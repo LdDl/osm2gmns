@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/LdDl/osm2gmns/geomath"
+	"github.com/LdDl/osm2gmns/gmns"
 )
 
 func getSpansConnections(outcomingLink *Link, incomingLinksList []*Link) [][]connectionPair {
@@ -12,7 +13,7 @@ func getSpansConnections(outcomingLink *Link, incomingLinksList []*Link) [][]con
 	for i, inLink := range incomingLinksList {
 		angles[i] = geomath.AngleBetweenLines(inLink.geomEuclidean, outcomingLink.geomEuclidean)
 	}
-	indicesMap := make(map[LinkID]int, len(incomingLinksList))
+	indicesMap := make(map[gmns.LinkID]int, len(incomingLinksList))
 	for index := range incomingLinksList {
 		link := incomingLinksList[index]
 		indicesMap[link.ID] = index
