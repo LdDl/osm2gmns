@@ -73,7 +73,6 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 	}
 
 	if VERBOSE {
-		// fmt.Printf("Done in %v\n", time.Since(st))
 		log.Info().Str("scope", "osm_read").Float64("elapsed", time.Since(st).Seconds()).Msg("Processing ways done!")
 	}
 	// Seek file to start

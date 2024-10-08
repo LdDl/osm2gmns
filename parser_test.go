@@ -37,6 +37,5 @@ func TestParser(t *testing.T) {
 	macroNet.ExportToCSV("test_data/test.csv")
 	movements.ExportToCSV("test_data/test_movement.csv")
 	// @todo
-	panic("start mesoscopic")
-	// t.Error(0)
+	t.Error("start mesoscopic")
 }

@@ -7,6 +7,8 @@ require (
 	github.com/paulmach/osm v0.7.1
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.31.0
+	github.com/stretchr/testify v1.9.0
+	github.com/yeqown/log v1.1.1
 )
 
 require (
@@ -16,7 +18,6 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/paulmach/protoscan v0.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

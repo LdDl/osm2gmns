@@ -1,7 +1,6 @@
 package macro
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/LdDl/osm2gmns/geomath"
@@ -11,6 +10,7 @@ import (
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/geo"
 	"github.com/paulmach/osm"
+	"github.com/rs/zerolog/log"
 )
 
 type DirectionType uint16
@@ -84,7 +84,7 @@ func (link *Link) GetOutcomingLaneIndices() []int {
 	lanesInfo := link.lanesInfo
 	idx := len(lanesInfo.LanesChange) - 1
 	if idx < 0 {
-		fmt.Printf("[WARNING]: Macroscopic link %d has no lanes change", link.ID)
+		log.Warn().Str("scope", "macro_internal").Int("macro_link_id", int(link.ID)).Msg("Macroscopic link has no lanes change")
 		return make([]int, 0)
 	}
 	return laneIndices(link.lanesNum, lanesInfo.LanesChange[idx][0], lanesInfo.LanesChange[idx][1])
