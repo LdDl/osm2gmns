@@ -139,7 +139,6 @@ func (node *Node) FindMovements(links map[gmns.LinkID]*Link) ([]movement.Movemen
 			if len(outcomingLinksList) == 0 {
 				return movements, nil
 			}
-			// @todo
 			connections := getIntersectionsConnections(incomingLink, outcomingLinksList)
 			outcomingLaneIndices := incomingLink.GetOutcomingLaneIndices()
 
