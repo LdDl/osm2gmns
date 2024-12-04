@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (osmData *OSMWaysNodes) GenerateMacroscopic(poi bool) (*macro.Net, error) {
+func GenerateMacroscopic(osmData *OSMWaysNodes, poi bool) (*macro.Net, error) {
 	ways, nodesSet, allowedAgentTypes := osmData.ways, osmData.nodes, osmData.allowedAgentTypes
 	preparedWays, err := prepareWays(ways, nodesSet, allowedAgentTypes)
 	if err != nil {

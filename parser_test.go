@@ -22,7 +22,7 @@ func TestParser(t *testing.T) {
 		return
 	}
 
-	macroNet, err := osmData.GenerateMacroscopic(parser.preparePOI)
+	macroNet, err := GenerateMacroscopic(osmData, parser.preparePOI)
 	if err != nil {
 		t.Error(err)
 		return
