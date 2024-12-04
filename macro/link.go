@@ -90,6 +90,40 @@ func (link *Link) GetOutcomingLaneIndices() []int {
 	return laneIndices(link.lanesNum, lanesInfo.LanesChange[idx][0], lanesInfo.LanesChange[idx][1])
 }
 
+// GeomEuclidean returns underlying euclidean geometry. Warning: returning object is a slice of Points.
+func (link *Link) GeomEuclidean() orb.LineString {
+	return link.geomEuclidean
+}
+
+// Geom returns underlying geometry. Warning: returning object is a slice of Points.
+func (link *Link) Geom() orb.LineString {
+	return link.geom
+}
+
+// MaxLanes returns max number of lanes on the link
+func (link *Link) MaxLanes() int {
+	if len(link.lanesInfo.LanesList) == 0 {
+		return -1
+	}
+	max := link.lanesInfo.LanesList[0]
+	for _, lane := range link.lanesInfo.LanesList {
+		if lane > max {
+			max = lane
+		}
+	}
+	return max
+}
+
+// LanesInfo just returns copy of the lanes information object
+func (link *Link) LanesInfo() LanesInfo {
+	return link.lanesInfo
+}
+
+// LengthMeters returns length of the underlying geometry
+func (link *Link) LengthMeters() float64 {
+	return link.lengthMeters
+}
+
 func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {
 	freeSpeed := -1.0
 	maxSpeed := -1.0

@@ -152,7 +152,7 @@ func intersection(p1, p2, p3, p4 orb.Point) (orb.Point, error) {
 	return orb.Point{x, y}, nil
 }
 
-func offsetCurve(line orb.LineString, distance float64) orb.LineString {
+func OffsetCurve(line orb.LineString, distance float64) orb.LineString {
 	// Initialize result list and segment list
 	var result orb.LineString
 	var segments [][2]orb.Point

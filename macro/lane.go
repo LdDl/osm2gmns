@@ -6,6 +6,7 @@ import (
 
 const (
 	resolution = 5.0
+	LANE_WIDTH = 3.5
 )
 
 type LanesInfo struct {

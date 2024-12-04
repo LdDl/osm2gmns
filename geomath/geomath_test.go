@@ -23,8 +23,8 @@ func TestOffset(t *testing.T) {
 	line := orb.LineString{{10.0, 10.0}, {15.0, 10.0}, {18.0, 15.0}, {18.0, 20.0}, {15.0, 24.0}, {12.0, 24.0}, {10.0, 18.0}, {10.0, 15.0}, {13.0, 12.0}, {15.0, 16.0}}
 	distance := 1.0
 
-	leftL := lineAsString(offsetCurve(line, distance))
-	rightL := lineAsString(offsetCurve(line, -distance))
+	leftL := lineAsString(OffsetCurve(line, distance))
+	rightL := lineAsString(OffsetCurve(line, -distance))
 
 	correctLeft := "[[10.000000, 11.000000],[14.433810, 11.000000],[17.000000, 15.276984],[17.000000, 19.666667],[14.500000, 23.000000],[12.720759, 23.000000],[11.000000, 17.837722],[11.000000, 15.414214],[12.726049, 13.688165],[14.105573, 16.447214]]"
 	if leftL != correctLeft {

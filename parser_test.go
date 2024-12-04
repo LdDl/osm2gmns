@@ -32,10 +32,15 @@ func TestParser(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	_ = movements
 
 	macroNet.ExportToCSV("test_data/test.csv")
 	movements.ExportToCSV("test_data/test_movement.csv")
 	// @todo
 	t.Error("start mesoscopic")
+	mesoNet, err := GenerateMesoscopic(macroNet, movements)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_ = mesoNet
 }
