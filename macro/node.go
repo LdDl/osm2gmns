@@ -57,6 +57,11 @@ func NewNodeFrom(id gmns.NodeID, node *wrappers.NodeOSM) *Node {
 	return &newNode
 }
 
+// ControlType returns control_type of the node
+func (node *Node) ControlType() types.ControlType {
+	return node.controlType
+}
+
 func (node *Node) FindMovements(links map[gmns.LinkID]*Link) ([]movement.Movement, error) {
 	movements := []movement.Movement{}
 

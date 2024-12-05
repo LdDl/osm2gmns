@@ -13,6 +13,7 @@ import (
 
 var (
 	ErrLinkNotFound = fmt.Errorf("Link not found")
+	ErrNodeNotFound = fmt.Errorf("Node not found")
 )
 
 type Net struct {

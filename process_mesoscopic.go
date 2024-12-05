@@ -75,12 +75,11 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 		macroLinkProcessing.offsetGeomEuclidean = geomath.OffsetCurve(macroLink.GeomEuclidean(), -offsetDistance)
 		macroLinkProcessing.offsetGeom = geomath.LineToSpherical(macroLinkProcessing.offsetGeomEuclidean)
 	}
-
 	// Update breakpoints since geometry has changed
 	for macroLinkID := range needToObserve {
 		macroLinkProcessing := needToObserve[macroLinkID]
 		// Re-calcuate length for offset geometry and round to 2 decimal places
-		macroLinkProcessing.lengthMetersOffset = math.Round(geo.LengthHaversign(macroLinkProcessing.offsetGeom)*100.0) / 100.0
+		macroLinkProcessing.lengthMetersOffset = math.Round(geo.LengthHaversine(macroLinkProcessing.offsetGeom)*100.0) / 100.0
 		macroLink, ok := macroNet.Links[macroLinkID]
 		if !ok {
 			return nil, errors.Wrapf(macro.ErrLinkNotFound, "Offset Link ID: %d", macroLinkID)
@@ -88,6 +87,20 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 		for i, item := range macroLinkProcessing.lanesInfo.LanesChangePoints {
 			macroLinkProcessing.lanesInfo.LanesChangePoints[i] = (item / macroLink.LengthMeters()) * macroLinkProcessing.lengthMetersOffset
 		}
+	}
+	if VERBOSE {
+		log.Info().Str("scope", "gen_meso").Msg("Aggregate movements for nodes")
+	}
+	nodesMovements := make(map[gmns.NodeID][]*movement.Movement, len(macroNet.Nodes))
+	for i := range movements {
+		mvmt := movements[i]
+		if _, ok := macroNet.Nodes[mvmt.MacroNodeID]; !ok {
+			return nil, errors.Wrapf(macro.ErrNodeNotFound, "Agg movements; Node ID: %d", mvmt.MacroNodeID)
+		}
+		if _, ok := nodesMovements[mvmt.MacroNodeID]; !ok {
+			nodesMovements[mvmt.MacroNodeID] = make([]*movement.Movement, 0, 1)
+		}
+		nodesMovements[mvmt.MacroNodeID] = append(nodesMovements[mvmt.MacroNodeID], mvmt)
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Msg("Process movements")
