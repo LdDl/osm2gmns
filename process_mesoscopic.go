@@ -16,6 +16,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	SHORTCUT_LENGTH  = 0.1
+	MIN_CUT_LENGTH   = 2.0
+	TOTAL_CUT_LENGTH = 2 * SHORTCUT_LENGTH * MIN_CUT_LENGTH
+)
+
+var (
+	CUT_LENGTHS = [100]float64{2.0, 8.0, 12.0, 14.0, 16.0, 18.0, 20, 22, 24, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25}
+)
+
 type macroLinkProcessing struct {
 	needsOffset         bool
 	id                  gmns.LinkID
@@ -29,6 +39,9 @@ type macroLinkProcessing struct {
 
 	downstreamIsTarget bool
 	upstreamIsTarget   bool
+
+	upstreamCutLen   float64
+	downstreamCutLen float64
 }
 
 func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage) (*meso.Net, error) {
@@ -68,31 +81,31 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 	}
 
 	for macroLinkID := range needToObserve {
-		macroLinkProcessing := needToObserve[macroLinkID]
+		macroLinkProcess := needToObserve[macroLinkID]
 		macroLink, ok := macroNet.Links[macroLinkID]
 		if !ok {
 			return nil, errors.Wrapf(macro.ErrLinkNotFound, "Offset Link ID: %d", macroLinkID)
 		}
-		if !macroLinkProcessing.needsOffset {
-			macroLinkProcessing.offsetGeomEuclidean = macroLink.GeomEuclidean().Clone()
-			macroLinkProcessing.offsetGeom = macroLink.Geom().Clone()
+		if !macroLinkProcess.needsOffset {
+			macroLinkProcess.offsetGeomEuclidean = macroLink.GeomEuclidean().Clone()
+			macroLinkProcess.offsetGeom = macroLink.Geom().Clone()
 			continue
 		}
 		offsetDistance := 2 * (float64(macroLink.MaxLanes())/2 + 0.5) * macro.LANE_WIDTH
-		macroLinkProcessing.offsetGeomEuclidean = geomath.OffsetCurve(macroLink.GeomEuclidean(), -offsetDistance)
-		macroLinkProcessing.offsetGeom = geomath.LineToSpherical(macroLinkProcessing.offsetGeomEuclidean)
+		macroLinkProcess.offsetGeomEuclidean = geomath.OffsetCurve(macroLink.GeomEuclidean(), -offsetDistance)
+		macroLinkProcess.offsetGeom = geomath.LineToSpherical(macroLinkProcess.offsetGeomEuclidean)
 	}
 	// Update breakpoints since geometry has changed
 	for macroLinkID := range needToObserve {
-		macroLinkProcessing := needToObserve[macroLinkID]
+		macroLinkProcess := needToObserve[macroLinkID]
 		// Re-calcuate length for offset geometry and round to 2 decimal places
-		macroLinkProcessing.lengthMetersOffset = math.Round(geo.LengthHaversine(macroLinkProcessing.offsetGeom)*100.0) / 100.0
+		macroLinkProcess.lengthMetersOffset = math.Round(geo.LengthHaversine(macroLinkProcess.offsetGeom)*100.0) / 100.0
 		macroLink, ok := macroNet.Links[macroLinkID]
 		if !ok {
 			return nil, errors.Wrapf(macro.ErrLinkNotFound, "Offset Link ID: %d", macroLinkID)
 		}
-		for i, item := range macroLinkProcessing.lanesInfo.LanesChangePoints {
-			macroLinkProcessing.lanesInfo.LanesChangePoints[i] = (item / macroLink.LengthMeters()) * macroLinkProcessing.lengthMetersOffset
+		for i, item := range macroLinkProcess.lanesInfo.LanesChangePoints {
+			macroLinkProcess.lanesInfo.LanesChangePoints[i] = (item / macroLink.LengthMeters()) * macroLinkProcess.lengthMetersOffset
 		}
 	}
 	if VERBOSE {
@@ -167,12 +180,12 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 				continue
 			}
 			macroNodesNeedMovement[macroNode.ID] = false
-			macroLinkProcessing := needToObserve[incomingMacroLinkID]
-			if macroLinkProcessing == nil {
+			macroLinkProcess := needToObserve[incomingMacroLinkID]
+			if macroLinkProcess == nil {
 				panic("Should find incoming macroscopic link in observable data")
 			}
-			macroLinkProcessing.downstreamShortCut = true
-			macroLinkProcessing.downstreamIsTarget = true
+			macroLinkProcess.downstreamShortCut = true
+			macroLinkProcess.downstreamIsTarget = true
 			for j := range outcomingMacroLinks {
 				outcomingMacroLinkID := outcomingMacroLinks[j]
 				outcomingMacroLink, ok := needToObserve[outcomingMacroLinkID]
@@ -221,12 +234,12 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 				continue
 			}
 			macroNodesNeedMovement[macroNode.ID] = false
-			macroLinkProcessing := needToObserve[outcomingMacroLinkID]
-			if macroLinkProcessing == nil {
+			macroLinkProcess := needToObserve[outcomingMacroLinkID]
+			if macroLinkProcess == nil {
 				panic("Should find outcoming macroscopic link in observable data")
 			}
-			macroLinkProcessing.upstreamShortCut = true
-			macroLinkProcessing.upstreamIsTarget = true
+			macroLinkProcess.upstreamShortCut = true
+			macroLinkProcess.upstreamIsTarget = true
 			for j := range incomingMacroLinks {
 				incomingMacroLinkID := incomingMacroLinks[j]
 				incomingMacroLink, ok := needToObserve[incomingMacroLinkID]
@@ -242,7 +255,12 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 		log.Info().Str("scope", "gen_meso").Msg("Process movements (calculate cuts' lengths and perform cuts)")
 	}
 
-	panic("@todo")
+	for macroLinkID := range needToObserve {
+		macroLinkProcess := needToObserve[macroLinkID]
+		macroLinkProcess.updateCutLength()
+		panic("@todo")
+		macroLinkProcess.performCut()
+	}
 
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Int("macro_nodes_num", len(mesoNet.Nodes)).Int("macro_links_num", len(mesoNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing mesoscopic network done!")
@@ -256,4 +274,86 @@ func macroLinksToSlice(links map[gmns.LinkID]*macro.Link) []*macro.Link {
 		ans = append(ans, links[i])
 	}
 	return ans
+}
+
+func (macroLinkProcess *macroLinkProcessing) updateCutLength() {
+	laneChangePoints := macroLinkProcess.lanesInfo.LanesChangePoints
+	// Dodge potential change of number of lanes on two ends of the macroscopic link
+	// @todo: Bound check for LanesChangePoints
+	upstreamMaxCut := math.Max(SHORTCUT_LENGTH, laneChangePoints[1]-laneChangePoints[0]-3)
+	// Defife a variable downstreamMaxCut which is the maximum length of a cut that can be made downstream of the link,
+	// calculated as the maximum of the shortcutLen and the difference between the last two elements in the link.lanesChangePoints minus 3.
+	// @todo: Bound check for LanesChangePoints
+	downstreamMaxCut := math.Max(SHORTCUT_LENGTH, laneChangePoints[len(laneChangePoints)-1]-laneChangePoints[len(laneChangePoints)-2]-3)
+	if macroLinkProcess.upstreamShortCut && macroLinkProcess.downstreamShortCut {
+		if macroLinkProcess.lengthMetersOffset > TOTAL_CUT_LENGTH {
+			macroLinkProcess.upstreamCutLen = SHORTCUT_LENGTH
+			macroLinkProcess.downstreamCutLen = SHORTCUT_LENGTH
+		} else {
+			macroLinkProcess.upstreamCutLen = (macroLinkProcess.lengthMetersOffset / TOTAL_CUT_LENGTH) * SHORTCUT_LENGTH
+			macroLinkProcess.downstreamCutLen = macroLinkProcess.upstreamCutLen
+		}
+	} else if macroLinkProcess.upstreamShortCut {
+		cutIdx := 0
+		cutPlaceFound := false
+		for i := macroLinkProcess.lanesInfo.LanesList[len(macroLinkProcess.lanesInfo.LanesList)-1]; i >= 0; i-- {
+			if macroLinkProcess.lengthMetersOffset > math.Min(downstreamMaxCut, CUT_LENGTHS[i])+SHORTCUT_LENGTH+MIN_CUT_LENGTH {
+				cutIdx = i
+				cutPlaceFound = true
+				break
+			}
+		}
+		if cutPlaceFound {
+			macroLinkProcess.upstreamCutLen = SHORTCUT_LENGTH
+			macroLinkProcess.downstreamCutLen = math.Min(downstreamMaxCut, CUT_LENGTHS[cutIdx])
+		} else {
+			downStreamCut := math.Min(downstreamMaxCut, CUT_LENGTHS[0])
+			totalLen := downStreamCut + SHORTCUT_LENGTH + MIN_CUT_LENGTH
+			macroLinkProcess.upstreamCutLen = (macroLinkProcess.lengthMetersOffset / totalLen) * SHORTCUT_LENGTH
+			macroLinkProcess.downstreamCutLen = (macroLinkProcess.lengthMetersOffset / totalLen) * downStreamCut
+		}
+	} else if macroLinkProcess.downstreamShortCut {
+		cutIdx := 0
+		cutPlaceFound := false
+		for i := macroLinkProcess.lanesInfo.LanesList[len(macroLinkProcess.lanesInfo.LanesList)-1]; i >= 0; i-- {
+			if macroLinkProcess.lengthMetersOffset > math.Min(upstreamMaxCut, CUT_LENGTHS[i])+SHORTCUT_LENGTH+MIN_CUT_LENGTH {
+				cutIdx = i
+				cutPlaceFound = true
+				break
+			}
+		}
+		if cutPlaceFound {
+			macroLinkProcess.upstreamCutLen = math.Min(upstreamMaxCut, CUT_LENGTHS[cutIdx])
+			macroLinkProcess.downstreamCutLen = SHORTCUT_LENGTH
+		} else {
+			upStreamCut := math.Min(upstreamMaxCut, CUT_LENGTHS[0])
+			totalLen := upStreamCut + SHORTCUT_LENGTH + MIN_CUT_LENGTH
+			macroLinkProcess.upstreamCutLen = (macroLinkProcess.lengthMetersOffset / totalLen) * CUT_LENGTHS[0]
+			macroLinkProcess.downstreamCutLen = (macroLinkProcess.lengthMetersOffset / totalLen) * SHORTCUT_LENGTH
+		}
+	} else {
+		cutIdx := 0
+		cutPlaceFound := false
+		for i := macroLinkProcess.lanesInfo.LanesList[len(macroLinkProcess.lanesInfo.LanesList)-1]; i >= 0; i-- {
+			if macroLinkProcess.lengthMetersOffset > math.Min(upstreamMaxCut, CUT_LENGTHS[i])+math.Min(downstreamMaxCut, CUT_LENGTHS[i])+MIN_CUT_LENGTH {
+				cutIdx = i
+				cutPlaceFound = true
+				break
+			}
+		}
+		if cutPlaceFound {
+			macroLinkProcess.upstreamCutLen = math.Min(upstreamMaxCut, CUT_LENGTHS[cutIdx])
+			macroLinkProcess.downstreamCutLen = math.Min(downstreamMaxCut, CUT_LENGTHS[cutIdx])
+		} else {
+			upStreamCut := math.Min(upstreamMaxCut, CUT_LENGTHS[0])
+			downStreamCut := math.Min(downstreamMaxCut, CUT_LENGTHS[0])
+			totalLen := downStreamCut + upStreamCut + MIN_CUT_LENGTH
+			macroLinkProcess.upstreamCutLen = (macroLinkProcess.lengthMetersOffset / totalLen) * upStreamCut
+			macroLinkProcess.downstreamCutLen = (macroLinkProcess.lengthMetersOffset / totalLen) * downStreamCut
+		}
+	}
+}
+
+func (macroLinkProcess *macroLinkProcessing) performCut() {
+
 }
