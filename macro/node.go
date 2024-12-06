@@ -62,6 +62,16 @@ func (node *Node) ControlType() types.ControlType {
 	return node.controlType
 }
 
+// IncomingLinks returns set of incoming links. Be carefull: it returns SLICE
+func (node *Node) IncomingLinks() []gmns.LinkID {
+	return node.incomingLinks
+}
+
+// OutcomingLinks returns set of outcoming links. Be carefull: it returns SLICE
+func (node *Node) OutcomingLinks() []gmns.LinkID {
+	return node.outcomingLinks
+}
+
 func (node *Node) FindMovements(links map[gmns.LinkID]*Link) ([]movement.Movement, error) {
 	movements := []movement.Movement{}
 
