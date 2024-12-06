@@ -32,8 +32,10 @@ type macroLinkProcessing struct {
 	offsetGeomEuclidean orb.LineString
 	offsetGeom          orb.LineString
 	lanesInfo           macro.LanesInfo
+	lanesInfoCut        macro.LanesInfo
 	lengthMetersOffset  float64
 
+	/* For cuts */
 	downstreamShortCut bool
 	upstreamShortCut   bool
 
@@ -42,6 +44,9 @@ type macroLinkProcessing struct {
 
 	upstreamCutLen   float64
 	downstreamCutLen float64
+
+	offsetGeomEuclideanCut []orb.LineString
+	offsetGeomCut          []orb.LineString
 }
 
 func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage) (*meso.Net, error) {
@@ -258,9 +263,14 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 	for macroLinkID := range needToObserve {
 		macroLinkProcess := needToObserve[macroLinkID]
 		macroLinkProcess.updateCutLength()
-		panic("@todo")
 		macroLinkProcess.performCut()
 	}
+
+	if VERBOSE {
+		log.Info().Str("scope", "gen_meso").Msg("Build mesoscopic links")
+	}
+
+	panic("@todo")
 
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Int("macro_nodes_num", len(mesoNet.Nodes)).Int("macro_links_num", len(mesoNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing mesoscopic network done!")
@@ -355,5 +365,47 @@ func (macroLinkProcess *macroLinkProcessing) updateCutLength() {
 }
 
 func (macroLinkProcess *macroLinkProcessing) performCut() {
+	lanesInfo := macroLinkProcess.lanesInfo
 
+	// Create copy for those since we will do mutations and want to keep original data
+	lanesChangePoints := make([]float64, len(lanesInfo.LanesChangePoints))
+	copy(lanesChangePoints, lanesInfo.LanesChangePoints)
+
+	macroLinkProcess.lanesInfoCut.LanesList = make([]int, len(lanesInfo.LanesList))
+	copy(macroLinkProcess.lanesInfoCut.LanesList, lanesInfo.LanesList)
+	macroLinkProcess.lanesInfoCut.LanesChange = make([][2]int, len(lanesInfo.LanesChange))
+	copy(macroLinkProcess.lanesInfoCut.LanesChange, lanesInfo.LanesChange)
+
+	lanesChangePoints[0] = macroLinkProcess.upstreamCutLen
+	lanesChangePoints[len(lanesChangePoints)-1] = macroLinkProcess.lengthMetersOffset - macroLinkProcess.downstreamCutLen
+	// breakIdx := 1
+	// for breakIdx = 1; breakIdx < len(lanesChangePoints); breakIdx++ {
+	// 	if lanesChangePoints[breakIdx] > macroLinkProcess.upstreamCutLen {
+	// 		break
+	// 	}
+	// }
+	// lanesChangePoints = append(lanesChangePoints[breakIdx:])
+	// lanesChangePoints = append([]float64{macroLinkProcess.upstreamCutLen}, lanesChangePoints...)
+	// macroLinkProcess.lanesInfoCut.LanesList = macroLinkProcess.lanesInfoCut.LanesList[breakIdx-1:]
+	// macroLinkProcess.lanesInfo.LanesChange = macroLinkProcess.lanesInfo.LanesChange[breakIdx-1:]
+
+	// breakIdx = len(lanesChangePoints) - 2
+	// for breakIdx := len(lanesChangePoints) - 2; breakIdx >= 0; breakIdx-- {
+	// 	if macroLinkProcess.lengthMetersOffset-lanesChangePoints[breakIdx] > macroLinkProcess.downstreamCutLen {
+	// 		break
+	// 	}
+	// }
+	// lanesChangePoints = lanesChangePoints[:breakIdx+1]
+	// lanesChangePoints = append(lanesChangePoints, macroLinkProcess.lengthMetersOffset-macroLinkProcess.downstreamCutLen)
+	// macroLinkProcess.lanesInfoCut.LanesList = macroLinkProcess.lanesInfoCut.LanesList[:breakIdx+1]
+	// macroLinkProcess.lanesInfo.LanesChange = macroLinkProcess.lanesInfo.LanesChange[:breakIdx+1]
+
+	for i := range macroLinkProcess.lanesInfoCut.LanesList {
+		start := lanesChangePoints[i]
+		end := lanesChangePoints[i+1]
+		geomCut := geomath.SubstringHaversine(macroLinkProcess.offsetGeom, start, end)
+		geomEuclideanCut := geomath.LineToEuclidean(geomCut)
+		macroLinkProcess.offsetGeomCut = append(macroLinkProcess.offsetGeomCut, geomCut)
+		macroLinkProcess.offsetGeomEuclideanCut = append(macroLinkProcess.offsetGeomEuclideanCut, geomEuclideanCut)
+	}
 }
