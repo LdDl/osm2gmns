@@ -1,6 +1,7 @@
 package osm2gmns
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -23,7 +24,8 @@ const (
 )
 
 var (
-	CUT_LENGTHS = [100]float64{2.0, 8.0, 12.0, 14.0, 16.0, 18.0, 20, 22, 24, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25}
+	CUT_LENGTHS          = [100]float64{2.0, 8.0, 12.0, 14.0, 16.0, 18.0, 20, 22, 24, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25}
+	ErrNotImplementedYet = fmt.Errorf("Not implemented yet")
 )
 
 type macroLinkProcessing struct {
@@ -47,6 +49,10 @@ type macroLinkProcessing struct {
 
 	offsetGeomEuclideanCut []orb.LineString
 	offsetGeomCut          []orb.LineString
+
+	/* For link generation */
+	sourceMacroNodeID gmns.NodeID
+	targetMacroNodeID gmns.NodeID
 }
 
 func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage) (*meso.Net, error) {
@@ -75,13 +81,13 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 			macroLinkCompareID := macroLinkCompare.ID
 			if orb.Equal(reversedGeom, macroLinkCompare.GeomEuclidean()) {
 				reversedLinkExists = true
-				needToObserve[macroLinkID] = &macroLinkProcessing{id: macroLinkID, lanesInfo: macroLink.LanesInfo(), needsOffset: true}
-				needToObserve[macroLinkCompareID] = &macroLinkProcessing{id: macroLinkCompareID, lanesInfo: macroLinkCompare.LanesInfo(), needsOffset: true}
+				needToObserve[macroLinkID] = &macroLinkProcessing{id: macroLinkID, lanesInfo: macroLink.LanesInfo(), needsOffset: true, sourceMacroNodeID: macroLink.SourceNode(), targetMacroNodeID: macroLink.TargetNode()}
+				needToObserve[macroLinkCompareID] = &macroLinkProcessing{id: macroLinkCompareID, lanesInfo: macroLinkCompare.LanesInfo(), needsOffset: true, sourceMacroNodeID: macroLinkCompare.SourceNode(), targetMacroNodeID: macroLinkCompare.TargetNode()}
 				break
 			}
 		}
 		if !reversedLinkExists {
-			needToObserve[macroLinkID] = &macroLinkProcessing{id: macroLinkID, lanesInfo: macroLink.LanesInfo()}
+			needToObserve[macroLinkID] = &macroLinkProcessing{id: macroLinkID, lanesInfo: macroLink.LanesInfo(), sourceMacroNodeID: macroLink.SourceNode(), targetMacroNodeID: macroLink.TargetNode()}
 		}
 	}
 
@@ -269,6 +275,11 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Msg("Build mesoscopic links")
 	}
+	generateNodesLinks(macroNet.Nodes, needToObserve)
+
+	if VERBOSE {
+		log.Info().Str("scope", "gen_meso").Msg("Connect mesoscopic links")
+	}
 
 	panic("@todo")
 
@@ -408,4 +419,103 @@ func (macroLinkProcess *macroLinkProcessing) performCut() {
 		macroLinkProcess.offsetGeomCut = append(macroLinkProcess.offsetGeomCut, geomCut)
 		macroLinkProcess.offsetGeomEuclideanCut = append(macroLinkProcess.offsetGeomEuclideanCut, geomEuclideanCut)
 	}
+}
+
+func generateNodesLinks(macroNodes map[gmns.NodeID]*macro.Node, macroLinksProcessed map[gmns.LinkID]*macroLinkProcessing) (map[gmns.NodeID]*meso.Node, map[gmns.LinkID]*meso.Link, error) {
+	lastMesoLinkID := gmns.LinkID(0)
+	expandedMesoNodes := make(map[gmns.NodeID]int)
+	collectedMesoNodes := make(map[gmns.NodeID]*meso.Node)
+	collectedMesoLinks := make(map[gmns.LinkID]*meso.Link)
+	for macroLinkID := range macroLinksProcessed {
+		macroLinkProcess := macroLinksProcessed[macroLinkID]
+
+		// Prepare source mesoscopic node
+		var upstreamMesoNode *meso.Node
+		sourceMacroNode, ok := macroNodes[macroLinkProcess.sourceMacroNodeID]
+		if !ok {
+			return nil, nil, errors.Wrapf(macro.ErrNodeNotFound, "Source node ID: %d", macroLinkProcess.sourceMacroNodeID)
+		}
+		if sourceMacroNode.IsCentroid() {
+			// @todo: handle centroids
+			return nil, nil, errors.Wrap(ErrNotImplementedYet, "Prepare upstream mesoscopic node from centroid")
+		} else {
+			expNodesNum, ok := expandedMesoNodes[macroLinkProcess.sourceMacroNodeID]
+			if !ok {
+				expandedMesoNodes[macroLinkProcess.sourceMacroNodeID] = 0
+			}
+			expandedMesoNodes[macroLinkProcess.sourceMacroNodeID] += 1
+			upstreamMesoNode = meso.NewNodeFrom(
+				macroLinkProcess.sourceMacroNodeID*100+gmns.NodeID(expNodesNum),
+				meso.WithPointGeom(macroLinkProcess.offsetGeomCut[0][0]), // No explicit copy or clone method since Point is not slice, but array
+				meso.WithPointEuclideanGeom(macroLinkProcess.offsetGeomEuclideanCut[0][0]),
+				meso.WithPointMacroNode(macroLinkProcess.sourceMacroNodeID),
+				meso.WithPointMacroLink(-1),
+				meso.WithMacroZone(sourceMacroNode.Zone()),
+				meso.WithActivityLinkType(sourceMacroNode.ActivityLinkType()),
+				meso.WithBoundaryType(types.BOUNDARY_NONE),
+			)
+			collectedMesoNodes[upstreamMesoNode.ID] = upstreamMesoNode
+		}
+
+		// Prepare mesoscopic link and target mesoscopic node
+		var downstreamMesoNode *meso.Node
+		targetMacroNode, ok := macroNodes[macroLinkProcess.targetMacroNodeID]
+		if !ok {
+			return nil, nil, errors.Wrapf(macro.ErrNodeNotFound, "Target node ID: %d", macroLinkProcess.targetMacroNodeID)
+		}
+		segmentsToCut := len(macroLinkProcess.lanesInfoCut.LanesList)
+		upstreamMesoNodeID := upstreamMesoNode.ID
+		for segmentIdx := 0; segmentIdx < segmentsToCut; segmentIdx++ {
+			// Prepare mesoscopic node
+			if targetMacroNode.IsCentroid() && segmentIdx == segmentsToCut-1 {
+				return nil, nil, errors.Wrap(ErrNotImplementedYet, "Prepare downstream mesoscopic node from centroid")
+			} else {
+				expNodesNum, ok := expandedMesoNodes[macroLinkProcess.targetMacroNodeID]
+				if !ok {
+					expandedMesoNodes[macroLinkProcess.targetMacroNodeID] = 0
+				}
+				expandedMesoNodes[macroLinkProcess.targetMacroNodeID] += 1
+				macroNodeID := gmns.NodeID(-1)
+				macroLinkID := macroLinkProcess.id
+				zoneID := gmns.NodeID(-1)
+				activityLinkType := types.LINK_UNDEFINED
+				if segmentIdx == segmentsToCut-1 {
+					macroNodeID = macroLinkProcess.targetMacroNodeID
+					macroLinkID = gmns.LinkID(-1)
+					zoneID = targetMacroNode.Zone()
+					activityLinkType = targetMacroNode.ActivityLinkType()
+				}
+				downstreamMesoNode = meso.NewNodeFrom(
+					macroLinkProcess.targetMacroNodeID*100+gmns.NodeID(expNodesNum),
+					meso.WithPointGeom(macroLinkProcess.offsetGeomCut[segmentIdx][len(macroLinkProcess.offsetGeomCut[segmentIdx])-1]), // No explicit copy or clone method since Point is not slice, but array
+					meso.WithPointEuclideanGeom(macroLinkProcess.offsetGeomEuclideanCut[segmentIdx][len(macroLinkProcess.offsetGeomEuclideanCut[segmentIdx])-1]),
+					meso.WithPointMacroNode(macroNodeID),
+					meso.WithPointMacroLink(macroLinkID),
+					meso.WithMacroZone(zoneID),
+					meso.WithActivityLinkType(activityLinkType),
+					meso.WithBoundaryType(types.BOUNDARY_NONE),
+				)
+				collectedMesoNodes[upstreamMesoNode.ID] = downstreamMesoNode
+			}
+
+			mesoLink := meso.NewLinkFrom(
+				lastMesoLinkID,
+				upstreamMesoNodeID,
+				downstreamMesoNode.ID,
+				meso.WithLanesNum(macroLinkProcess.lanesInfoCut.LanesList[segmentIdx]),
+				meso.WithLanesChange(macroLinkProcess.lanesInfoCut.LanesChange[segmentIdx]),
+				meso.WithLineGeom(macroLinkProcess.offsetGeomCut[segmentIdx].Clone()),
+				meso.WithLineEuclideanGeom(macroLinkProcess.offsetGeomEuclideanCut[segmentIdx].Clone()),
+				meso.WithLineMacroLink(macroLinkProcess.id),
+				meso.WithMovement(-1),
+				meso.WithLineMacroNode(-1),
+				meso.WithLengthMeters(geo.LengthHaversine(macroLinkProcess.offsetGeomCut[segmentIdx])),
+			)
+			// Prepare mesoscopic link
+			collectedMesoLinks[mesoLink.ID] = mesoLink
+			lastMesoLinkID += 1
+			upstreamMesoNodeID = downstreamMesoNode.ID // This must be done since current upstream node is downstream node for next segment
+		}
+	}
+	return collectedMesoNodes, collectedMesoLinks, nil
 }

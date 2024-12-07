@@ -72,6 +72,26 @@ func (node *Node) OutcomingLinks() []gmns.LinkID {
 	return node.outcomingLinks
 }
 
+// IsCentroid returns whether node is centroid or not
+func (node *Node) IsCentroid() bool {
+	return node.isCentroid
+}
+
+// Zone returns node's zone identifier
+func (node *Node) Zone() gmns.NodeID {
+	return node.zoneID
+}
+
+// ActivityLinkType returns node activity link type
+func (node *Node) ActivityLinkType() types.LinkType {
+	return node.activityLinkType
+}
+
+// BoundaryType returns node boundary type
+func (node *Node) BoundaryType() types.BoundaryType {
+	return node.boundaryType
+}
+
 func (node *Node) FindMovements(links map[gmns.LinkID]*Link) ([]movement.Movement, error) {
 	movements := []movement.Movement{}
 

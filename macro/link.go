@@ -124,6 +124,16 @@ func (link *Link) LengthMeters() float64 {
 	return link.lengthMeters
 }
 
+// SourceNode returns identifier of source node
+func (link *Link) SourceNode() gmns.NodeID {
+	return link.sourceNodeID
+}
+
+// TargetNode returns identifier of target node
+func (link *Link) TargetNode() gmns.NodeID {
+	return link.targetNodeID
+}
+
 func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {
 	freeSpeed := -1.0
 	maxSpeed := -1.0
