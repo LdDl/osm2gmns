@@ -18,11 +18,16 @@ type Node struct {
 	macroZoneID      gmns.NodeID        // Should be inherited from the macroscopic node
 	activityLinkType types.LinkType     // Should be inherited from the macroscopic node
 	boundaryType     types.BoundaryType // Should be evaluated from macroscopic node and macroscopic link
+
+	incomingLinks  map[gmns.LinkID]struct{}
+	outcomingLinks map[gmns.LinkID]struct{}
 }
 
 func NewNodeFrom(id gmns.NodeID, options ...func(*Node)) *Node {
 	newNode := &Node{
-		ID: id,
+		ID:             id,
+		incomingLinks:  make(map[gmns.LinkID]struct{}),
+		outcomingLinks: make(map[gmns.LinkID]struct{}),
 	}
 	for _, option := range options {
 		option(newNode)
@@ -69,5 +74,33 @@ func WithPointGeom(geom orb.Point) func(*Node) {
 func WithPointEuclideanGeom(geomEuclidean orb.Point) func(*Node) {
 	return func(node *Node) {
 		node.geomEuclidean = geomEuclidean
+	}
+}
+
+func WithIncomingLinks(linksIDs ...gmns.LinkID) func(*Node) {
+	return func(node *Node) {
+		for i := range linksIDs {
+			node.incomingLinks[linksIDs[i]] = struct{}{}
+		}
+	}
+}
+
+func WithOutcomingLinks(linksIDs ...gmns.LinkID) func(*Node) {
+	return func(node *Node) {
+		for i := range linksIDs {
+			node.outcomingLinks[linksIDs[i]] = struct{}{}
+		}
+	}
+}
+
+func (node *Node) AddIncomingLinks(linksIDs ...gmns.LinkID) {
+	for i := range linksIDs {
+		node.incomingLinks[linksIDs[i]] = struct{}{}
+	}
+}
+
+func (node *Node) AddOutcomingLinks(linksIDs ...gmns.LinkID) {
+	for i := range linksIDs {
+		node.outcomingLinks[linksIDs[i]] = struct{}{}
 	}
 }

@@ -22,6 +22,8 @@ type Link struct {
 	macroNodeID gmns.NodeID
 	macroLinkID gmns.LinkID
 
+	segmentIdx int
+
 	isConnection bool
 
 	/* Movement information */
@@ -94,6 +96,12 @@ func WithLanesChange(lanesChange [2]int) func(*Link) {
 	}
 }
 
+func WithSegmentIdx(segmentIdx int) func(*Link) {
+	return func(link *Link) {
+		link.segmentIdx = segmentIdx
+	}
+}
+
 func WithMovement(movementID movement.MovementID) func(*Link) {
 	return func(link *Link) {
 		link.movementID = movementID
@@ -104,4 +112,51 @@ func Connection(isConnection bool) func(*Link) {
 	return func(link *Link) {
 		link.isConnection = isConnection
 	}
+}
+
+func (link *Link) SourceNodeID() gmns.NodeID {
+	return link.sourceNodeID
+}
+
+func (link *Link) TargetNodeID() gmns.NodeID {
+	return link.targetNodeID
+}
+
+func (link *Link) MacroLinkID() gmns.LinkID {
+	return link.macroLinkID
+}
+
+func (link *Link) MacroNodeID() gmns.NodeID {
+	return link.macroNodeID
+}
+
+func (link *Link) SegmentIdx() int {
+	return link.segmentIdx
+}
+
+func (link *Link) IsConnection() bool {
+	return link.isConnection
+}
+
+func (link *Link) LanesNum() int {
+	return link.lanesNum
+}
+
+func (link *Link) LanesChange() [2]int {
+	return link.lanesChange
+}
+
+// GeomEuclidean returns underlying euclidean geometry. Warning: returning object is a slice of Points.
+func (link *Link) GeomEuclidean() orb.LineString {
+	return link.geomEuclidean
+}
+
+// Geom returns underlying geometry. Warning: returning object is a slice of Points.
+func (link *Link) Geom() orb.LineString {
+	return link.geom
+}
+
+// LengthMeters returns geometry length in meters
+func (link *Link) LengthMeters() float64 {
+	return link.lengthMeters
 }

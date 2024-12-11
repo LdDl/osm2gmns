@@ -3,6 +3,7 @@ package osm2gmns
 import (
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/LdDl/osm2gmns/geomath"
@@ -275,10 +276,18 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Msg("Build mesoscopic links")
 	}
-	generateNodesLinks(macroNet.Nodes, needToObserve)
+	mesoNodes, mesoLinks, err := generateBaseNodesLinks(macroNet.Nodes, needToObserve)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't generate base mesoscopic nodes and links")
+	}
 
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Msg("Connect mesoscopic links")
+	}
+
+	err = connectMesoscopicLinks(mesoLinks, mesoNodes, macroNet.Nodes, macroNet.Links, macroNodesMovements, macroNodesNeedMovement)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't prepare connections between mesoscopic links")
 	}
 
 	panic("@todo")
@@ -421,7 +430,7 @@ func (macroLinkProcess *macroLinkProcessing) performCut() {
 	}
 }
 
-func generateNodesLinks(macroNodes map[gmns.NodeID]*macro.Node, macroLinksProcessed map[gmns.LinkID]*macroLinkProcessing) (map[gmns.NodeID]*meso.Node, map[gmns.LinkID]*meso.Link, error) {
+func generateBaseNodesLinks(macroNodes map[gmns.NodeID]*macro.Node, macroLinksProcessed map[gmns.LinkID]*macroLinkProcessing) (map[gmns.NodeID]*meso.Node, map[gmns.LinkID]*meso.Link, error) {
 	lastMesoLinkID := gmns.LinkID(0)
 	expandedMesoNodes := make(map[gmns.NodeID]int)
 	collectedMesoNodes := make(map[gmns.NodeID]*meso.Node)
@@ -495,7 +504,7 @@ func generateNodesLinks(macroNodes map[gmns.NodeID]*macro.Node, macroLinksProces
 					meso.WithActivityLinkType(activityLinkType),
 					meso.WithBoundaryType(types.BOUNDARY_NONE),
 				)
-				collectedMesoNodes[upstreamMesoNode.ID] = downstreamMesoNode
+				collectedMesoNodes[downstreamMesoNode.ID] = downstreamMesoNode
 			}
 
 			mesoLink := meso.NewLinkFrom(
@@ -507,10 +516,14 @@ func generateNodesLinks(macroNodes map[gmns.NodeID]*macro.Node, macroLinksProces
 				meso.WithLineGeom(macroLinkProcess.offsetGeomCut[segmentIdx].Clone()),
 				meso.WithLineEuclideanGeom(macroLinkProcess.offsetGeomEuclideanCut[segmentIdx].Clone()),
 				meso.WithLineMacroLink(macroLinkProcess.id),
+				meso.WithSegmentIdx(segmentIdx),
 				meso.WithMovement(-1),
 				meso.WithLineMacroNode(-1),
 				meso.WithLengthMeters(geo.LengthHaversine(macroLinkProcess.offsetGeomCut[segmentIdx])),
 			)
+			meso.WithOutcomingLinks(lastMesoLinkID)(collectedMesoNodes[upstreamMesoNodeID])
+			meso.WithIncomingLinks(lastMesoLinkID)(collectedMesoNodes[downstreamMesoNode.ID])
+
 			// Prepare mesoscopic link
 			collectedMesoLinks[mesoLink.ID] = mesoLink
 			lastMesoLinkID += 1
@@ -518,4 +531,110 @@ func generateNodesLinks(macroNodes map[gmns.NodeID]*macro.Node, macroLinksProces
 		}
 	}
 	return collectedMesoNodes, collectedMesoLinks, nil
+}
+
+func connectMesoscopicLinks(
+	mesoLinks map[gmns.LinkID]*meso.Link,
+	mesoNodes map[gmns.NodeID]*meso.Node,
+	macroNodes map[gmns.NodeID]*macro.Node,
+	macroLinks map[gmns.LinkID]*macro.Link,
+	macroNodesMovements map[gmns.NodeID][]*movement.Movement,
+	macroNodesNeedMovement map[gmns.NodeID]bool,
+) error {
+	lastMesoLinkID := gmns.LinkID(0)
+
+	// Find max ID (for further links creating)
+	for _, mesoLink := range mesoLinks {
+		if mesoLink.ID > lastMesoLinkID {
+			lastMesoLinkID = mesoLink.ID
+		}
+	}
+	lastMesoLinkID++
+
+	// Collect mesoscopic links for parent macroscopic links
+	macroLinkMesoLinks := make(map[gmns.LinkID][]*meso.Link)
+	for i := range mesoLinks {
+		macroLinkID := mesoLinks[i].MacroLinkID()
+		if _, ok := macroLinkMesoLinks[macroLinkID]; !ok {
+			macroLinkMesoLinks[macroLinkID] = make([]*meso.Link, 0, 1)
+		}
+		macroLinkMesoLinks[macroLinkID] = append(macroLinkMesoLinks[macroLinkID], mesoLinks[i])
+	}
+	for i := range macroLinkMesoLinks {
+		macroLinkData := macroLinkMesoLinks[i]
+		/* Sort mesoscopic links by its segment number in parent macroscopic link */
+		// @todo: We can achieve better perfomance if does sort during populating data
+		sort.Slice(macroLinkData, func(i, j int) bool {
+			return macroLinkData[i].SegmentIdx() < macroLinkData[j].SegmentIdx()
+		})
+	}
+
+	collectedMesoLinks := make(map[gmns.LinkID]*meso.Link)
+	// Start main loop for finding connections between mesoscopic links
+	for macroNodeID := range macroNodes {
+		// macroNode := macroNodes[macroNodeID]
+		macroNodeMvmts, ok := macroNodesMovements[macroNodeID]
+		if !ok {
+			continue
+		}
+		for j := range macroNodeMvmts {
+			mvmt := macroNodeMvmts[j]
+			incomingMacroLink, ok := macroLinks[mvmt.IncomeMacroLinkID]
+			if !ok {
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", mvmt.IncomeMacroLinkID)
+			}
+			outcomingMacroLink, ok := macroLinks[mvmt.OutcomeMacroLinkID]
+			if !ok {
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", mvmt.OutcomeMacroLinkID)
+			}
+
+			incomingMesolinks := macroLinkMesoLinks[incomingMacroLink.ID]
+			if len(incomingMesolinks) == 0 {
+				panic("No mesoscopic links for incoming macro link")
+			}
+			outcomingMesolinks := macroLinkMesoLinks[outcomingMacroLink.ID]
+			if len(outcomingMesolinks) == 0 {
+				panic("No mesoscopic links for outcoming macro link")
+			}
+
+			incomigMesoLink := incomingMesolinks[len(incomingMesolinks)-1]
+			incomigMesoLinkGeom := incomigMesoLink.Geom()
+			incomigMesoLinkGeomEuclidean := incomigMesoLink.GeomEuclidean()
+			outcomigMesoLink := outcomingMesolinks[0]
+			outcomigMesoLinkGeom := outcomigMesoLink.Geom()
+			outcomigMesoLinkGeomEuclidean := outcomigMesoLink.GeomEuclidean()
+
+			geom := orb.LineString{incomigMesoLinkGeom[len(incomigMesoLinkGeom)-1], outcomigMesoLinkGeom[0]}
+			geomEuclidean := orb.LineString{incomigMesoLinkGeomEuclidean[len(incomigMesoLinkGeomEuclidean)-1], outcomigMesoLinkGeomEuclidean[0]}
+			if macroNodesNeedMovement[macroNodeID] {
+				sourceMesoNodeID := incomigMesoLink.TargetNodeID()
+				targetMesoNodeID := outcomigMesoLink.SourceNodeID()
+				mesoLink := meso.NewLinkFrom(
+					lastMesoLinkID,
+					sourceMesoNodeID,
+					targetMesoNodeID,
+					meso.WithLanesNum(mvmt.LanesNum()),
+					meso.WithLineGeom(geom),
+					meso.WithLineEuclideanGeom(geomEuclidean),
+					meso.WithLineMacroLink(-1),
+					meso.Connection(true),
+					meso.WithMovement(mvmt.ID),
+					meso.WithLineMacroNode(macroNodeID),
+					meso.WithLengthMeters(geo.LengthHaversine(geom)),
+					/* mmvmt properties: todo */
+				)
+				meso.WithOutcomingLinks(lastMesoLinkID)(mesoNodes[sourceMesoNodeID])
+				meso.WithIncomingLinks(lastMesoLinkID)(mesoNodes[targetMesoNodeID])
+				// Prepare mesoscopic link
+				collectedMesoLinks[mesoLink.ID] = mesoLink
+				lastMesoLinkID += 1
+			} else {
+				panic("@todo: delete redundant node")
+			}
+		}
+	}
+	for i := range collectedMesoLinks {
+		mesoLinks[collectedMesoLinks[i].ID] = collectedMesoLinks[i]
+	}
+	return nil
 }

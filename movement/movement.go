@@ -171,3 +171,8 @@ func WithName(name string) func(*Movement) {
 		mvmt.name = name
 	}
 }
+
+// LanesNum returns number of lanes
+func (mvmt *Movement) LanesNum() int {
+	return mvmt.lanesNum
+}
