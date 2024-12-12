@@ -144,3 +144,13 @@ func (node *Node) ActivityLinkType() types.LinkType {
 func (node *Node) BoundaryType() types.BoundaryType {
 	return node.boundaryType
 }
+
+// BoundaryType returns boundary type. Outputs BOUNDARY_NONE if there is no information.
+func (node *Node) IncomingLinks() map[gmns.LinkID]struct{} {
+	return node.incomingLinks
+}
+
+// BoundaryType returns boundary type. Outputs BOUNDARY_NONE if there is no information.
+func (node *Node) OutcomingLinks() map[gmns.LinkID]struct{} {
+	return node.outcomingLinks
+}

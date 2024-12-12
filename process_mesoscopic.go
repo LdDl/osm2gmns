@@ -27,6 +27,7 @@ const (
 var (
 	CUT_LENGTHS          = [100]float64{2.0, 8.0, 12.0, 14.0, 16.0, 18.0, 20, 22, 24, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25}
 	ErrNotImplementedYet = fmt.Errorf("Not implemented yet")
+	ErrBadParentInfo     = fmt.Errorf("Bad parent information")
 )
 
 type macroLinkProcessing struct {
@@ -284,7 +285,6 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Msg("Connect mesoscopic links")
 	}
-
 	err = connectMesoscopicLinks(mesoLinks, mesoNodes, macroNet.Nodes, macroNet.Links, needToObserve, macroNodesMovements, macroNodesNeedMovement)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't prepare connections between mesoscopic links")
@@ -292,6 +292,14 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 
 	if VERBOSE {
 		log.Info().Str("scope", "gen_meso").Msg("Updating boundary type for mesoscopic nodes")
+	}
+	err = updateBoundaryType(mesoNodes, macroNet.Nodes)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't update boundary types for mesoscopic nodes")
+	}
+
+	if VERBOSE {
+		log.Info().Str("scope", "gen_meso").Msg("Updating additional information for mesoscopic links")
 	}
 
 	panic("@todo")
@@ -667,6 +675,35 @@ func connectMesoscopicLinks(
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func updateBoundaryType(mesoNodes map[gmns.NodeID]*meso.Node, macroNodes map[gmns.NodeID]*macro.Node) error {
+	for i := range mesoNodes {
+		mesoNode := mesoNodes[i]
+		macroNodeID := mesoNode.MacroNodeID()
+		if macroNodeID < 0 && mesoNode.MacroLinkID() < 0 {
+			return errors.Wrapf(ErrBadParentInfo, "Neither macroscopic link nor node for meso node: %d", mesoNode.ID)
+		}
+		if mesoNode.MacroNodeID() < 0 {
+			meso.WithBoundaryType(types.BOUNDARY_NONE)(mesoNode)
+			continue
+		}
+		macroNode, ok := macroNodes[macroNodeID]
+		if !ok {
+			return errors.Wrapf(macro.ErrNodeNotFound, "Can't find macroscopic node with id %d for mesoscopic node %d", macroNodeID, mesoNode.ID)
+		}
+		macroNodeBoundaryType := macroNode.BoundaryType()
+		if macroNodeBoundaryType != types.BOUNDARY_INCOME_OUTCOME {
+			meso.WithBoundaryType(macroNodeBoundaryType)(mesoNode)
+			continue
+		}
+		if len(mesoNode.IncomingLinks()) != 0 {
+			meso.WithBoundaryType(types.BOUNDARY_INCOME_ONLY)(mesoNode)
+			continue
+		}
+		meso.WithBoundaryType(types.BOUNDARY_OUTCOME_ONLY)(mesoNode)
 	}
 	return nil
 }
