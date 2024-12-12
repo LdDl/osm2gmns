@@ -3,6 +3,7 @@ package meso
 import (
 	"github.com/LdDl/osm2gmns/gmns"
 	"github.com/LdDl/osm2gmns/types"
+	"github.com/elliotchance/orderedmap"
 	"github.com/paulmach/orb"
 )
 
@@ -19,8 +20,8 @@ type Node struct {
 	activityLinkType types.LinkType     // Should be inherited from the macroscopic node
 	boundaryType     types.BoundaryType // Should be evaluated from macroscopic node and macroscopic link
 
-	incomingLinks  map[gmns.LinkID]struct{}
-	outcomingLinks map[gmns.LinkID]struct{}
+	incomingLinks  *orderedmap.OrderedMap
+	outcomingLinks *orderedmap.OrderedMap
 }
 
 func NewNodeFrom(id gmns.NodeID, options ...func(*Node)) *Node {
@@ -31,8 +32,8 @@ func NewNodeFrom(id gmns.NodeID, options ...func(*Node)) *Node {
 		macroZoneID:      -1,
 		activityLinkType: types.LINK_UNDEFINED,
 		boundaryType:     types.BOUNDARY_NONE,
-		incomingLinks:    make(map[gmns.LinkID]struct{}),
-		outcomingLinks:   make(map[gmns.LinkID]struct{}),
+		incomingLinks:    orderedmap.NewOrderedMap(),
+		outcomingLinks:   orderedmap.NewOrderedMap(),
 	}
 	for _, option := range options {
 		option(newNode)
@@ -85,7 +86,7 @@ func WithPointEuclideanGeom(geomEuclidean orb.Point) func(*Node) {
 func WithIncomingLinks(linksIDs ...gmns.LinkID) func(*Node) {
 	return func(node *Node) {
 		for i := range linksIDs {
-			node.incomingLinks[linksIDs[i]] = struct{}{}
+			node.incomingLinks.Set(linksIDs[i], struct{}{})
 		}
 	}
 }
@@ -93,20 +94,8 @@ func WithIncomingLinks(linksIDs ...gmns.LinkID) func(*Node) {
 func WithOutcomingLinks(linksIDs ...gmns.LinkID) func(*Node) {
 	return func(node *Node) {
 		for i := range linksIDs {
-			node.outcomingLinks[linksIDs[i]] = struct{}{}
+			node.outcomingLinks.Set(linksIDs[i], struct{}{})
 		}
-	}
-}
-
-func (node *Node) AddIncomingLinks(linksIDs ...gmns.LinkID) {
-	for i := range linksIDs {
-		node.incomingLinks[linksIDs[i]] = struct{}{}
-	}
-}
-
-func (node *Node) AddOutcomingLinks(linksIDs ...gmns.LinkID) {
-	for i := range linksIDs {
-		node.outcomingLinks[linksIDs[i]] = struct{}{}
 	}
 }
 
@@ -145,12 +134,12 @@ func (node *Node) BoundaryType() types.BoundaryType {
 	return node.boundaryType
 }
 
-// BoundaryType returns boundary type. Outputs BOUNDARY_NONE if there is no information.
-func (node *Node) IncomingLinks() map[gmns.LinkID]struct{} {
+// BoundaryType returns boundary type. Outputs BOUNDARY_NONE if there is no information. Warning: returns pointer.
+func (node *Node) IncomingLinks() *orderedmap.OrderedMap {
 	return node.incomingLinks
 }
 
-// BoundaryType returns boundary type. Outputs BOUNDARY_NONE if there is no information.
-func (node *Node) OutcomingLinks() map[gmns.LinkID]struct{} {
+// BoundaryType returns boundary type. Outputs BOUNDARY_NONE if there is no information. Warning: returns pointer.
+func (node *Node) OutcomingLinks() *orderedmap.OrderedMap {
 	return node.outcomingLinks
 }

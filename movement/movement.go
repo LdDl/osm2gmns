@@ -1,6 +1,7 @@
 package movement
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/LdDl/osm2gmns/geomath"
@@ -8,6 +9,10 @@ import (
 	"github.com/LdDl/osm2gmns/types"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/osm"
+)
+
+var (
+	ErrMvmtNotFound = fmt.Errorf("Movement not found")
 )
 
 type autoInc struct {

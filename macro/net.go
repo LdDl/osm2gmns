@@ -165,13 +165,11 @@ func (net *Net) genBoundaryAndActivityType() error {
 			node.activityLinkType = types.LINK_UNDEFINED
 		}
 		if linkTypesCounters, ok := nodesLinkTypesCounters[nodeID]; ok {
-			maxLinkTypes := []types.LinkType{}
+			maxLinkTypes := []types.LinkType{types.LINK_UNDEFINED}
 			maxLinkTypeCount := 0
 			for linkType, counter := range linkTypesCounters {
 				if counter > maxLinkTypeCount {
 					maxLinkTypeCount = counter
-					maxLinkTypes = []types.LinkType{linkType}
-				} else if counter == maxLinkTypeCount {
 					maxLinkTypes = append(maxLinkTypes, linkType)
 				}
 			}

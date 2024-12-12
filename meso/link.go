@@ -3,6 +3,7 @@ package meso
 import (
 	"github.com/LdDl/osm2gmns/gmns"
 	"github.com/LdDl/osm2gmns/movement"
+	"github.com/LdDl/osm2gmns/types"
 	"github.com/paulmach/orb"
 )
 
@@ -33,6 +34,13 @@ type Link struct {
 	movementMesoLinkOutcome       gmns.LinkID
 	movementIncomeLaneStartSeqID  int
 	movementOutcomeLaneStartSeqID int
+
+	/* Inherited from paret data parameters */
+	controlType       types.ControlType // Inherited from macroscopic node
+	linkType          types.LinkType    // Inherited either from macroscopic link or from first incoming incident edge in macroscopic node
+	freeSpeed         float64           // Inherited either from macroscopic link or from first incoming incident edge in macroscopic node
+	capacity          int               // Inherited either from macroscopic link or from first incoming incident edge in macroscopic node
+	allowedAgentTypes []types.AgentType // Inherited either from macroscopic link or from first incoming incident edge in macroscopic node
 }
 
 func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, options ...func(*Link)) *Link {
@@ -47,6 +55,11 @@ func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, options
 		movementMesoLinkOutcome:       gmns.LinkID(-1),
 		movementIncomeLaneStartSeqID:  -1,
 		movementOutcomeLaneStartSeqID: -1,
+		controlType:                   types.CONTROL_TYPE_NOT_SIGNAL,
+		linkType:                      types.LINK_UNDEFINED,
+		freeSpeed:                     0.0,
+		capacity:                      0,
+		allowedAgentTypes:             []types.AgentType{},
 	}
 	for _, option := range options {
 		option(newLink)
@@ -108,7 +121,7 @@ func WithMovement(movementID movement.MovementID) func(*Link) {
 	}
 }
 
-func WithMovementType(movementCompositeType movement.MovementCompositeType) func(*Link) {
+func WithMovementCompositeType(movementCompositeType movement.MovementCompositeType) func(*Link) {
 	return func(link *Link) {
 		link.movementCompositeType = movementCompositeType
 	}
@@ -138,9 +151,41 @@ func WithMovementOutcomeLaneStartSeqID(startOutcomeLaneSeqID int) func(*Link) {
 	}
 }
 
-func Connection(isConnection bool) func(*Link) {
+func WithConnection(isConnection bool) func(*Link) {
 	return func(link *Link) {
 		link.isConnection = isConnection
+	}
+}
+
+func WithControlType(controlType types.ControlType) func(*Link) {
+	return func(link *Link) {
+		link.controlType = controlType
+	}
+}
+
+func WithLinkType(linkType types.LinkType) func(*Link) {
+	return func(link *Link) {
+		link.linkType = linkType
+	}
+}
+
+func WithFreeSpeed(freeSpeed float64) func(*Link) {
+	return func(link *Link) {
+		link.freeSpeed = freeSpeed
+	}
+}
+
+func WithCapacity(capacity int) func(*Link) {
+	return func(link *Link) {
+		link.capacity = capacity
+	}
+}
+
+// WithAllowedAgentTypes sets allowed agent types for the link. Warning: it does copy argument
+func WithAllowedAgentTypes(allowedAgentTypes []types.AgentType) func(*Link) {
+	return func(link *Link) {
+		link.allowedAgentTypes = make([]types.AgentType, len(allowedAgentTypes))
+		copy(link.allowedAgentTypes, allowedAgentTypes)
 	}
 }
 
@@ -189,6 +234,36 @@ func (link *Link) Geom() orb.LineString {
 // LengthMeters returns geometry length in meters
 func (link *Link) LengthMeters() float64 {
 	return link.lengthMeters
+}
+
+// LinkType returns link type
+func (link *Link) LinkType() types.LinkType {
+	return link.linkType
+}
+
+// FreeSpeed returns free flow speed
+func (link *Link) FreeSpeed() float64 {
+	return link.freeSpeed
+}
+
+// Capacity returns max capacity
+func (link *Link) Capacity() int {
+	return link.capacity
+}
+
+// ControlType returns control type
+func (link *Link) ControlType() types.ControlType {
+	return link.controlType
+}
+
+// AllowedAgentTypes returns set of allowed agent types. Warning: returning object is a slice.
+func (link *Link) AllowedAgentTypes() []types.AgentType {
+	return link.allowedAgentTypes
+}
+
+// Movement returns attached movement ID
+func (link *Link) Movement() movement.MovementID {
+	return link.movementID
 }
 
 // SetSourceNode sets source mesoscopic node

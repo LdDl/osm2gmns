@@ -3,6 +3,7 @@ module github.com/LdDl/osm2gmns
 go 1.21.1
 
 require (
+	github.com/elliotchance/orderedmap v1.7.0
 	github.com/paulmach/orb v0.10.0
 	github.com/paulmach/osm v0.7.1
 	github.com/pkg/errors v0.9.1

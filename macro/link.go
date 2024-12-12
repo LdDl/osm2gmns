@@ -125,6 +125,31 @@ func (link *Link) TargetNode() gmns.NodeID {
 	return link.targetNodeID
 }
 
+// LinkType returns link type
+func (link *Link) LinkType() types.LinkType {
+	return link.linkType
+}
+
+// FreeSpeed returns free flow speed
+func (link *Link) FreeSpeed() float64 {
+	return link.freeSpeed
+}
+
+// Capacity returns max capacity
+func (link *Link) Capacity() int {
+	return link.capacity
+}
+
+// ControlType returns control type
+func (link *Link) ControlType() types.ControlType {
+	return link.controlType
+}
+
+// AllowedAgentTypes returns set of allowed agent types. Warning: returning object is a slice.
+func (link *Link) AllowedAgentTypes() []types.AgentType {
+	return link.allowedAgentTypes
+}
+
 func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *Link {
 	freeSpeed := -1.0
 	maxSpeed := -1.0

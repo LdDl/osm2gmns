@@ -1,7 +1,14 @@
 package meso
 
 import (
+	"fmt"
+
 	"github.com/LdDl/osm2gmns/gmns"
+)
+
+var (
+	ErrLinkNotFound = fmt.Errorf("Link not found")
+	ErrNodeNotFound = fmt.Errorf("Node not found")
 )
 
 type Net struct {
