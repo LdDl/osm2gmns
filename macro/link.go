@@ -45,15 +45,7 @@ type Link struct {
 
 	lanesNum int
 	/* For Mesoscopic and Microscopic */
-	mesolinks              []gmns.LinkID
-	lanesInfo              LanesInfo
-	lanesListCut           []int
-	lanesChangeCut         [][2]int
-	geomOffset             orb.LineString
-	geomOffsetCut          []orb.LineString
-	geomEuclideanOffset    orb.LineString
-	geomEuclideanOffsetCut []orb.LineString
-	lengthMetersOffset     float64
+	lanesInfo LanesInfo
 }
 
 func (link *Link) GetIncomingLanes() int {
