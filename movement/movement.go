@@ -176,3 +176,13 @@ func WithName(name string) func(*Movement) {
 func (mvmt *Movement) LanesNum() int {
 	return mvmt.lanesNum
 }
+
+// StartIncomeLaneSeqID returns index of the income lane
+func (mvmt *Movement) StartIncomeLaneSeqID() int {
+	return mvmt.startIncomeLaneSeqID
+}
+
+// StartOutcomeLaneSeqID returns index of the outcome lane
+func (mvmt *Movement) StartOutcomeLaneSeqID() int {
+	return mvmt.startOutcomeLaneSeqID
+}

@@ -108,6 +108,36 @@ func WithMovement(movementID movement.MovementID) func(*Link) {
 	}
 }
 
+func WithMovementType(movementCompositeType movement.MovementCompositeType) func(*Link) {
+	return func(link *Link) {
+		link.movementCompositeType = movementCompositeType
+	}
+}
+
+func WithMovementLinkIncome(mesoLinkID gmns.LinkID) func(*Link) {
+	return func(link *Link) {
+		link.movementMesoLinkIncome = mesoLinkID
+	}
+}
+
+func WithMovementLinkOutcome(mesoLinkID gmns.LinkID) func(*Link) {
+	return func(link *Link) {
+		link.movementMesoLinkOutcome = mesoLinkID
+	}
+}
+
+func WithMovementIncomeLaneStartSeqID(startIncomeLaneSeqID int) func(*Link) {
+	return func(link *Link) {
+		link.movementIncomeLaneStartSeqID = startIncomeLaneSeqID
+	}
+}
+
+func WithMovementOutcomeLaneStartSeqID(startOutcomeLaneSeqID int) func(*Link) {
+	return func(link *Link) {
+		link.movementOutcomeLaneStartSeqID = startOutcomeLaneSeqID
+	}
+}
+
 func Connection(isConnection bool) func(*Link) {
 	return func(link *Link) {
 		link.isConnection = isConnection

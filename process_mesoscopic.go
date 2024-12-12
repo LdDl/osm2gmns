@@ -597,18 +597,18 @@ func connectMesoscopicLinks(
 				panic("No mesoscopic links for outcoming macro link")
 			}
 
-			incomigMesoLink := incomingMesolinks[len(incomingMesolinks)-1]
-			incomigMesoLinkGeom := incomigMesoLink.Geom()
-			incomigMesoLinkGeomEuclidean := incomigMesoLink.GeomEuclidean()
-			outcomigMesoLink := outcomingMesolinks[0]
-			outcomigMesoLinkGeom := outcomigMesoLink.Geom()
-			outcomigMesoLinkGeomEuclidean := outcomigMesoLink.GeomEuclidean()
+			incomingMesoLink := incomingMesolinks[len(incomingMesolinks)-1]
+			incomingMesoLinkGeom := incomingMesoLink.Geom()
+			incomingMesoLinkGeomEuclidean := incomingMesoLink.GeomEuclidean()
+			outcomingMesoLink := outcomingMesolinks[0]
+			outcomingMesoLinkGeom := outcomingMesoLink.Geom()
+			outcomingMesoLinkGeomEuclidean := outcomingMesoLink.GeomEuclidean()
 
-			geom := orb.LineString{incomigMesoLinkGeom[len(incomigMesoLinkGeom)-1], outcomigMesoLinkGeom[0]}
-			geomEuclidean := orb.LineString{incomigMesoLinkGeomEuclidean[len(incomigMesoLinkGeomEuclidean)-1], outcomigMesoLinkGeomEuclidean[0]}
+			geom := orb.LineString{incomingMesoLinkGeom[len(incomingMesoLinkGeom)-1], outcomingMesoLinkGeom[0]}
+			geomEuclidean := orb.LineString{incomingMesoLinkGeomEuclidean[len(incomingMesoLinkGeomEuclidean)-1], outcomingMesoLinkGeomEuclidean[0]}
 			if macroNodesNeedMovement[macroNodeID] {
-				sourceMesoNodeID := incomigMesoLink.TargetNodeID()
-				targetMesoNodeID := outcomigMesoLink.SourceNodeID()
+				sourceMesoNodeID := incomingMesoLink.TargetNodeID()
+				targetMesoNodeID := outcomingMesoLink.SourceNodeID()
 				mesoLink := meso.NewLinkFrom(
 					lastMesoLinkID,
 					sourceMesoNodeID,
@@ -621,7 +621,11 @@ func connectMesoscopicLinks(
 					meso.WithMovement(mvmt.ID),
 					meso.WithLineMacroNode(macroNodeID),
 					meso.WithLengthMeters(geo.LengthHaversine(geom)),
-					/* mmvmt properties: todo */
+					meso.WithMovementType(mvmt.MTextID),
+					meso.WithMovementLinkIncome(incomingMesoLink.ID),
+					meso.WithMovementLinkOutcome(outcomingMesoLink.ID),
+					meso.WithMovementIncomeLaneStartSeqID(mvmt.StartIncomeLaneSeqID()),
+					meso.WithMovementOutcomeLaneStartSeqID(mvmt.StartOutcomeLaneSeqID()),
 				)
 				meso.WithOutcomingLinks(lastMesoLinkID)(mesoNodes[sourceMesoNodeID])
 				meso.WithIncomingLinks(lastMesoLinkID)(mesoNodes[targetMesoNodeID])
