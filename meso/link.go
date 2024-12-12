@@ -190,3 +190,13 @@ func (link *Link) Geom() orb.LineString {
 func (link *Link) LengthMeters() float64 {
 	return link.lengthMeters
 }
+
+// SetSourceNode sets source mesoscopic node
+func (link *Link) SetSourceNode(sourceNodeID gmns.NodeID) {
+	link.sourceNodeID = sourceNodeID
+}
+
+// SetTargetNode sets target mesoscopic node
+func (link *Link) SetTargetNode(targetNodeID gmns.NodeID) {
+	link.targetNodeID = targetNodeID
+}

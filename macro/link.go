@@ -54,15 +54,6 @@ type Link struct {
 	geomEuclideanOffset    orb.LineString
 	geomEuclideanOffsetCut []orb.LineString
 	lengthMetersOffset     float64
-
-	downstreamShortCut bool
-	upstreamShortCut   bool
-
-	downstreamIsTarget bool
-	upstreamIsTarget   bool
-
-	upstreamCutLen   float64
-	downstreamCutLen float64
 }
 
 func (link *Link) GetIncomingLanes() int {

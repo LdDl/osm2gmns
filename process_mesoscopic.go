@@ -285,9 +285,13 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 		log.Info().Str("scope", "gen_meso").Msg("Connect mesoscopic links")
 	}
 
-	err = connectMesoscopicLinks(mesoLinks, mesoNodes, macroNet.Nodes, macroNet.Links, macroNodesMovements, macroNodesNeedMovement)
+	err = connectMesoscopicLinks(mesoLinks, mesoNodes, macroNet.Nodes, macroNet.Links, needToObserve, macroNodesMovements, macroNodesNeedMovement)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't prepare connections between mesoscopic links")
+	}
+
+	if VERBOSE {
+		log.Info().Str("scope", "gen_meso").Msg("Updating boundary type for mesoscopic nodes")
 	}
 
 	panic("@todo")
@@ -538,6 +542,7 @@ func connectMesoscopicLinks(
 	mesoNodes map[gmns.NodeID]*meso.Node,
 	macroNodes map[gmns.NodeID]*macro.Node,
 	macroLinks map[gmns.LinkID]*macro.Link,
+	macroLinksProcessed map[gmns.LinkID]*macroLinkProcessing,
 	macroNodesMovements map[gmns.NodeID][]*movement.Movement,
 	macroNodesNeedMovement map[gmns.NodeID]bool,
 ) error {
@@ -569,7 +574,6 @@ func connectMesoscopicLinks(
 		})
 	}
 
-	collectedMesoLinks := make(map[gmns.LinkID]*meso.Link)
 	// Start main loop for finding connections between mesoscopic links
 	for macroNodeID := range macroNodes {
 		// macroNode := macroNodes[macroNodeID]
@@ -586,6 +590,15 @@ func connectMesoscopicLinks(
 			outcomingMacroLink, ok := macroLinks[mvmt.OutcomeMacroLinkID]
 			if !ok {
 				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", mvmt.OutcomeMacroLinkID)
+			}
+
+			incomingMacroLinkProcessed, ok := macroLinksProcessed[mvmt.IncomeMacroLinkID]
+			if !ok {
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find processed macro link for further connection: %d", mvmt.IncomeMacroLinkID)
+			}
+			outcomingMacroLinkProcessed, ok := macroLinksProcessed[mvmt.OutcomeMacroLinkID]
+			if !ok {
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find processed macro link for further connection: %d", mvmt.OutcomeMacroLinkID)
 			}
 
 			incomingMesolinks := macroLinkMesoLinks[incomingMacroLink.ID]
@@ -630,15 +643,30 @@ func connectMesoscopicLinks(
 				meso.WithOutcomingLinks(lastMesoLinkID)(mesoNodes[sourceMesoNodeID])
 				meso.WithIncomingLinks(lastMesoLinkID)(mesoNodes[targetMesoNodeID])
 				// Prepare mesoscopic link
-				collectedMesoLinks[mesoLink.ID] = mesoLink
+				mesoLinks[mesoLink.ID] = mesoLink
 				lastMesoLinkID += 1
 			} else {
-				panic("@todo: delete redundant node")
+				if incomingMacroLinkProcessed.downstreamIsTarget && !outcomingMacroLinkProcessed.upstreamIsTarget {
+					// remove incoming micro nodes and links of outcomingMesoLink, then connect to incomingMesoLink
+					incomingMesoLinkTargetNodeID := incomingMesoLink.TargetNodeID()
+					outcomingMesoLinkSourceNodeID := outcomingMesoLink.SourceNodeID()
+
+					outcomingMesoLink.SetSourceNode(incomingMesoLinkTargetNodeID)
+					meso.WithLineGeom(append(orb.LineString{incomingMesoLinkGeom[len(incomingMesoLinkGeom)-1]}, outcomingMesoLinkGeom[1:]...))(outcomingMesoLink)
+					meso.WithLineEuclideanGeom(append(orb.LineString{incomingMesoLinkGeomEuclidean[len(incomingMesoLinkGeomEuclidean)-1]}, outcomingMesoLinkGeomEuclidean[1:]...))(outcomingMesoLink)
+					delete(mesoNodes, outcomingMesoLinkSourceNodeID)
+				} else if !incomingMacroLinkProcessed.downstreamIsTarget && outcomingMacroLinkProcessed.upstreamIsTarget {
+					// remove outgoing micro nodes and links of incomingMesoLink, then connect to outcomingMesoLink
+					incomingMesoLinkTargetNodeID := incomingMesoLink.TargetNodeID()
+					outcomingMesoLinkSourceNodeID := outcomingMesoLink.SourceNodeID()
+
+					incomingMesoLink.SetTargetNode(outcomingMesoLinkSourceNodeID)
+					meso.WithLineGeom(append(incomingMesoLinkGeom[:len(incomingMesoLinkGeom)-1], outcomingMesoLinkGeom[0]))(incomingMesoLink)
+					meso.WithLineEuclideanGeom(append(incomingMesoLinkGeomEuclidean[:len(incomingMesoLinkGeomEuclidean)-1], outcomingMesoLinkGeomEuclidean[0]))(incomingMesoLink)
+					delete(mesoNodes, incomingMesoLinkTargetNodeID)
+				}
 			}
 		}
-	}
-	for i := range collectedMesoLinks {
-		mesoLinks[collectedMesoLinks[i].ID] = collectedMesoLinks[i]
 	}
 	return nil
 }
