@@ -3,7 +3,7 @@ package meso
 import (
 	"fmt"
 
-	"github.com/LdDl/osm2gmns/gmns"
+	"github.com/LdDl/go-gmns/gmns"
 )
 
 var (

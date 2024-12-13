@@ -1,9 +1,9 @@
 package meso
 
 import (
-	"github.com/LdDl/osm2gmns/gmns"
-	"github.com/LdDl/osm2gmns/movement"
-	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/go-gmns/gmns"
+	"github.com/LdDl/go-gmns/gmns/types"
+	"github.com/LdDl/go-gmns/movement"
 	"github.com/paulmach/orb"
 )
 
@@ -28,7 +28,7 @@ type Link struct {
 	isConnection bool
 
 	/* Movement information */
-	movementID                    movement.MovementID
+	movementID                    gmns.MovementID
 	movementCompositeType         movement.MovementCompositeType // Inherited from movement
 	movementMesoLinkIncome        gmns.LinkID
 	movementMesoLinkOutcome       gmns.LinkID
@@ -115,7 +115,7 @@ func WithSegmentIdx(segmentIdx int) func(*Link) {
 	}
 }
 
-func WithMovement(movementID movement.MovementID) func(*Link) {
+func WithMovement(movementID gmns.MovementID) func(*Link) {
 	return func(link *Link) {
 		link.movementID = movementID
 	}
@@ -262,7 +262,7 @@ func (link *Link) AllowedAgentTypes() []types.AgentType {
 }
 
 // Movement returns attached movement ID
-func (link *Link) Movement() movement.MovementID {
+func (link *Link) Movement() gmns.MovementID {
 	return link.movementID
 }
 

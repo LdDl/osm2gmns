@@ -6,12 +6,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/LdDl/osm2gmns/geomath"
-	"github.com/LdDl/osm2gmns/gmns"
-	"github.com/LdDl/osm2gmns/macro"
+	"github.com/LdDl/go-gmns/movement"
+
+	"github.com/LdDl/go-gmns/gmns"
+	"github.com/LdDl/go-gmns/gmns/types"
+	"github.com/LdDl/go-gmns/macro"
+	"github.com/LdDl/go-gmns/utils/geomath"
 	"github.com/LdDl/osm2gmns/meso"
-	"github.com/LdDl/osm2gmns/movement"
-	"github.com/LdDl/osm2gmns/types"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/geo"
 	"github.com/pkg/errors"
@@ -127,13 +128,14 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 	macroNodesMovements := make(map[gmns.NodeID][]*movement.Movement, len(macroNet.Nodes))
 	for i := range movements {
 		mvmt := movements[i]
-		if _, ok := macroNet.Nodes[mvmt.MacroNodeID]; !ok {
-			return nil, errors.Wrapf(macro.ErrNodeNotFound, "Agg movements; Node ID: %d", mvmt.MacroNodeID)
+		macroNodeID := mvmt.MacroNode()
+		if _, ok := macroNet.Nodes[macroNodeID]; !ok {
+			return nil, errors.Wrapf(macro.ErrNodeNotFound, "Agg movements; Node ID: %d", macroNodeID)
 		}
-		if _, ok := macroNodesMovements[mvmt.MacroNodeID]; !ok {
-			macroNodesMovements[mvmt.MacroNodeID] = make([]*movement.Movement, 0, 1)
+		if _, ok := macroNodesMovements[macroNodeID]; !ok {
+			macroNodesMovements[macroNodeID] = make([]*movement.Movement, 0, 1)
 		}
-		macroNodesMovements[mvmt.MacroNodeID] = append(macroNodesMovements[mvmt.MacroNodeID], mvmt)
+		macroNodesMovements[macroNodeID] = append(macroNodesMovements[macroNodeID], mvmt)
 	}
 
 	if VERBOSE {
@@ -182,11 +184,12 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 			if ok {
 				for j := range macroNodeMvmts {
 					mvmt := macroNodeMvmts[j]
-					if _, ok := outcomingMacroLinksObserved[mvmt.OutcomeMacroLinkID]; ok {
+					outcomeMacroLinkID := mvmt.OutcomeMacroLink()
+					if _, ok := outcomingMacroLinksObserved[outcomeMacroLinkID]; ok {
 						hasMultipleConnections = true
 						break
 					}
-					outcomingMacroLinksObserved[mvmt.OutcomeMacroLinkID] = struct{}{}
+					outcomingMacroLinksObserved[outcomeMacroLinkID] = struct{}{}
 				}
 			}
 			if hasMultipleConnections {
@@ -236,11 +239,12 @@ func GenerateMesoscopic(macroNet *macro.Net, movements movement.MovementsStorage
 			if ok {
 				for j := range macroNodeMvmts {
 					mvmt := macroNodeMvmts[j]
-					if _, ok := outcomingMacroLinksObserved[mvmt.IncomeMacroLinkID]; ok {
+					incomeMacroLinkID := mvmt.IncomeMacroLink()
+					if _, ok := outcomingMacroLinksObserved[incomeMacroLinkID]; ok {
 						hasMultipleConnections = true
 						break
 					}
-					outcomingMacroLinksObserved[mvmt.IncomeMacroLinkID] = struct{}{}
+					outcomingMacroLinksObserved[incomeMacroLinkID] = struct{}{}
 				}
 			}
 			if hasMultipleConnections {
@@ -597,22 +601,24 @@ func connectMesoscopicLinks(
 		}
 		for j := range macroNodeMvmts {
 			mvmt := macroNodeMvmts[j]
-			incomingMacroLink, ok := macroLinks[mvmt.IncomeMacroLinkID]
+			incomeMacroLinkID := mvmt.IncomeMacroLink()
+			outcomeMacroLinkID := mvmt.OutcomeMacroLink()
+			incomingMacroLink, ok := macroLinks[incomeMacroLinkID]
 			if !ok {
-				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", mvmt.IncomeMacroLinkID)
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", incomeMacroLinkID)
 			}
-			outcomingMacroLink, ok := macroLinks[mvmt.OutcomeMacroLinkID]
+			outcomingMacroLink, ok := macroLinks[outcomeMacroLinkID]
 			if !ok {
-				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", mvmt.OutcomeMacroLinkID)
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find macro link for further connection: %d", outcomeMacroLinkID)
 			}
 
-			incomingMacroLinkProcessed, ok := macroLinksProcessed[mvmt.IncomeMacroLinkID]
+			incomingMacroLinkProcessed, ok := macroLinksProcessed[incomeMacroLinkID]
 			if !ok {
-				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find processed macro link for further connection: %d", mvmt.IncomeMacroLinkID)
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find processed macro link for further connection: %d", incomeMacroLinkID)
 			}
-			outcomingMacroLinkProcessed, ok := macroLinksProcessed[mvmt.OutcomeMacroLinkID]
+			outcomingMacroLinkProcessed, ok := macroLinksProcessed[outcomeMacroLinkID]
 			if !ok {
-				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find processed macro link for further connection: %d", mvmt.OutcomeMacroLinkID)
+				return errors.Wrapf(macro.ErrLinkNotFound, "Can't find processed macro link for further connection: %d", outcomeMacroLinkID)
 			}
 
 			incomingMesolinks := macroLinkMesoLinks[incomingMacroLink.ID]
@@ -648,7 +654,7 @@ func connectMesoscopicLinks(
 					meso.WithMovement(mvmt.ID),
 					meso.WithLineMacroNode(macroNodeID),
 					meso.WithLengthMeters(geo.LengthHaversine(geom)),
-					meso.WithMovementCompositeType(mvmt.MTextID),
+					meso.WithMovementCompositeType(mvmt.MvmtTextID()),
 					meso.WithMovementLinkIncome(incomingMesoLink.ID),
 					meso.WithMovementLinkOutcome(outcomingMesoLink.ID),
 					meso.WithMovementIncomeLaneStartSeqID(mvmt.StartIncomeLaneSeqID()),
@@ -764,7 +770,7 @@ func updateLinksProperties(
 		if !ok {
 			return errors.Wrapf(movement.ErrMvmtNotFound, "Can't find movement with ID %d for mesoscopic link %d", movementID, mesoLink.ID)
 		}
-		meso.WithMovementCompositeType(mvmt.MTextID)(mesoLink)
+		meso.WithMovementCompositeType(mvmt.MvmtTextID())(mesoLink)
 	}
 
 	// Inherit macroscopic link properties for movement links

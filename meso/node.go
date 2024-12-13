@@ -1,8 +1,8 @@
 package meso
 
 import (
-	"github.com/LdDl/osm2gmns/gmns"
-	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/go-gmns/gmns"
+	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/elliotchance/orderedmap"
 	"github.com/paulmach/orb"
 )
