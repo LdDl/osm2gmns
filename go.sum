@@ -10,6 +10,8 @@ github.com/LdDl/go-gmns v0.0.0-20241215142954-920d36e44937 h1:TCjI2+liecR09vwVUA
 github.com/LdDl/go-gmns v0.0.0-20241215142954-920d36e44937/go.mod h1:qS8YuFNh9Koud8Q7jjTME6Ft5J4yLvMO2uZ8ErjZXag=
 github.com/LdDl/go-gmns v0.0.0-20241215143642-eb4015e4b351 h1:YwmOw6jHvCf5/PAgXe6J1Unk3/WFJdADrKSSk4pbuUI=
 github.com/LdDl/go-gmns v0.0.0-20241215143642-eb4015e4b351/go.mod h1:qS8YuFNh9Koud8Q7jjTME6Ft5J4yLvMO2uZ8ErjZXag=
+github.com/LdDl/go-gmns v0.0.0-20241215155005-95a871853d35 h1:OKU6HJzArpoGb/Isns4duA+roppVh97ztGdRn5dZ2y8=
+github.com/LdDl/go-gmns v0.0.0-20241215155005-95a871853d35/go.mod h1:qS8YuFNh9Koud8Q7jjTME6Ft5J4yLvMO2uZ8ErjZXag=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2 h1:ISaMhBq2dagaoptFGUyywT5SzpysCbHofX3sCNw1djo=
 github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2/go.mod h1:2yDaWzisHKoQoxm+EU4YgKBaD7g1M0pxy7THWG44Lro=

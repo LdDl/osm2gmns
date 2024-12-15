@@ -48,7 +48,7 @@ func TestParser(t *testing.T) {
 		return
 	}
 
-	mesoNet, err := GenerateMesoscopic(macroNet, movements)
+	mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
 	if err != nil {
 		t.Error(err)
 		return
