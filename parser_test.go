@@ -6,6 +6,7 @@ import (
 	"github.com/LdDl/go-gmns/generators"
 	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/osm2gmns/expmacro"
+	"github.com/LdDl/osm2gmns/expmeso"
 	"github.com/LdDl/osm2gmns/expmovement"
 )
 
@@ -55,7 +56,7 @@ func TestParser(t *testing.T) {
 
 	// @todo
 	t.Error("start export mesoscopic")
-	err = mesoNet.ExportToCSV("test_data/NEW_test_meso.csv")
+	err = expmeso.ExportToCSV(mesoNet, "test_data/NEW_test_meso.csv")
 	if err != nil {
 		t.Error(err)
 		return

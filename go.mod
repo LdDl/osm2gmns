@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	github.com/LdDl/go-gmns v0.0.0-20241213183231-49ad624bf2ab // indirect
+	github.com/LdDl/go-gmns v0.0.0-20241215143642-eb4015e4b351 // indirect
 	github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
