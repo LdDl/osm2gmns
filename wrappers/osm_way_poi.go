@@ -1,6 +1,8 @@
 package wrappers
 
-import "github.com/LdDl/osm2gmns/types"
+import (
+	"github.com/LdDl/go-gmns/gmns/types"
+)
 
 type WayPOIProps struct {
 	poiName string

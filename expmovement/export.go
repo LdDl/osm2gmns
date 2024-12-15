@@ -1,4 +1,4 @@
-package movement
+package expmovement
 
 import (
 	"encoding/csv"
@@ -6,17 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/LdDl/go-gmns/movement"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
 )
 
-type MovementsStorage map[MovementID]*Movement
-
-func NewMovementsStorage() map[MovementID]*Movement {
-	return make(map[MovementID]*Movement)
-}
-
-func (mvmtStorage MovementsStorage) ExportToCSV(fname string) error {
+func ExportToCSV(mvmtStorage movement.MovementsStorage, fname string) error {
 	file, err := os.Create(fname)
 	if err != nil {
 		return errors.Wrap(err, "Can't create file")
@@ -34,33 +29,33 @@ func (mvmtStorage MovementsStorage) ExportToCSV(fname string) error {
 
 	for k := range mvmtStorage {
 		mvmt := mvmtStorage[k]
-		allowedAgentTypes := make([]string, len(mvmt.allowedAgentTypes))
-		for i, agentType := range mvmt.allowedAgentTypes {
+		allowedAgentTypes := make([]string, len(mvmt.AllowedAgentTypes()))
+		for i, agentType := range mvmt.AllowedAgentTypes() {
 			allowedAgentTypes[i] = agentType.String()
 		}
 		err = writer.Write([]string{
 			fmt.Sprintf("%d", mvmt.ID),
-			fmt.Sprintf("%d", mvmt.MacroNodeID),
-			fmt.Sprintf("%d", mvmt.osmNodeID),
-			mvmt.name,
-			fmt.Sprintf("%d", mvmt.IncomeMacroLinkID),
-			fmt.Sprintf("%d", mvmt.incomeLaneStart),
-			fmt.Sprintf("%d", mvmt.incomeLaneEnd),
-			fmt.Sprintf("%d", mvmt.OutcomeMacroLinkID),
-			fmt.Sprintf("%d", mvmt.outcomeLaneStart),
-			fmt.Sprintf("%d", mvmt.outcomeLaneEnd),
-			fmt.Sprintf("%d", mvmt.lanesNum),
-			fmt.Sprintf("%d", mvmt.fromOsmNodeID),
-			fmt.Sprintf("%d", mvmt.toOsmNodeID),
-			mvmt.MType.String(),
+			fmt.Sprintf("%d", mvmt.MacroNode()),
+			fmt.Sprintf("%d", mvmt.OSMNode()),
+			mvmt.Name(),
+			fmt.Sprintf("%d", mvmt.IncomeMacroLink()),
+			fmt.Sprintf("%d", mvmt.IncomeLaneStart()),
+			fmt.Sprintf("%d", mvmt.IncomeLaneEnd()),
+			fmt.Sprintf("%d", mvmt.OutcomeMacroLink()),
+			fmt.Sprintf("%d", mvmt.OutcomeLaneStart()),
+			fmt.Sprintf("%d", mvmt.OutcomeLaneEnd()),
+			fmt.Sprintf("%d", mvmt.LanesNum()),
+			fmt.Sprintf("%d", mvmt.OSMNodeSource()),
+			fmt.Sprintf("%d", mvmt.OSMNodeTarget()),
+			mvmt.Type().String(),
 			fmt.Sprintf("%d", -1),
 			fmt.Sprintf("%d", -1),
-			mvmt.controlType.String(),
-			mvmt.MTextID.String(),
+			mvmt.ControlType().String(),
+			mvmt.MvmtTextID().String(),
 			fmt.Sprintf("%d", -1),
 			fmt.Sprintf("%d", -1),
 			strings.Join(allowedAgentTypes, ","),
-			wkt.MarshalString(mvmt.Geom),
+			wkt.MarshalString(mvmt.Geom()),
 		})
 		if err != nil {
 			return errors.Wrap(err, "Can't write node")

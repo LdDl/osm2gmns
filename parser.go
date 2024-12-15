@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/go-gmns/gmns/types"
 )
 
 type Parser struct {

@@ -1,7 +1,7 @@
 package osm2gmns
 
 import (
-	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 )

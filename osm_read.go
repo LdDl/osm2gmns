@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"

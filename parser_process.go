@@ -3,8 +3,10 @@ package osm2gmns
 import (
 	"time"
 
-	"github.com/LdDl/osm2gmns/macro"
-	"github.com/LdDl/osm2gmns/types"
+	"github.com/LdDl/go-gmns/macro"
+
+	"github.com/LdDl/go-gmns/gmns/types"
+	"github.com/LdDl/osm2gmns/expmacro"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/pkg/errors"
@@ -29,7 +31,7 @@ func GenerateMacroscopic(osmData *OSMWaysNodes, poi bool) (*macro.Net, error) {
 		log.Info().Str("scope", "gen_macro").Msg("Preparing macroscopic network")
 	}
 	st := time.Now()
-	macroNet, err := macro.NewNetFromOSM(preparedWays, preparedNodes)
+	macroNet, err := expmacro.NewNetFromOSM(preparedWays, preparedNodes)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't prepare macroscopic network")
 	}

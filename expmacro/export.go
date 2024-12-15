@@ -1,4 +1,4 @@
-package macro
+package expmacro
 
 import (
 	"encoding/csv"
@@ -6,34 +6,29 @@ import (
 	"os"
 	"strings"
 
+	"github.com/LdDl/go-gmns/macro"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
 )
 
-func (net *Net) ExportToCSV(fname string) error {
+func ExportToCSV(macroNet *macro.Net, fname string) error {
 	fnameParts := strings.Split(fname, ".csv")
 	fnameNodes := fmt.Sprintf(fnameParts[0] + "_macro_nodes.csv")
 	fnameLinks := fmt.Sprintf(fnameParts[0] + "_macro_links.csv")
-	// fnameMovement := fmt.Sprintf(fnameParts[0] + "_movement.csv")
 
-	err := net.exportNodesToCSV(fnameNodes)
+	err := exportNodesToCSV(macroNet, fnameNodes)
 	if err != nil {
 		return errors.Wrap(err, "Can't export nodes")
 	}
 
-	err = net.exportLinksToCSV(fnameLinks)
+	err = exportLinksToCSV(macroNet, fnameLinks)
 	if err != nil {
 		return errors.Wrap(err, "Can't export links")
 	}
-
-	// err = net.exportMovementToCSV(fnameMovement)
-	// if err != nil {
-	// return errors.Wrap(err, "Can't export movement")
-	// }
 	return nil
 }
 
-func (net *Net) exportNodesToCSV(fname string) error {
+func exportNodesToCSV(macroNet *macro.Net, fname string) error {
 	file, err := os.Create(fname)
 	if err != nil {
 		return errors.Wrap(err, "Can't create file")
@@ -49,22 +44,22 @@ func (net *Net) exportNodesToCSV(fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for i := range net.Nodes {
-		node := net.Nodes[i]
+	for i := range macroNet.Nodes {
+		node := macroNet.Nodes[i]
 		err = writer.Write([]string{
 			fmt.Sprintf("%d", node.ID),
-			fmt.Sprintf("%d", node.osmNodeID),
-			node.controlType.String(),
-			node.boundaryType.String(),
-			node.activityType.String(),
-			node.activityLinkType.String(),
-			fmt.Sprintf("%d", node.zoneID),
-			fmt.Sprintf("%d", node.intersectionID),
-			fmt.Sprintf("%d", node.poiID),
-			node.osmHighway,
-			node.name,
-			fmt.Sprintf("%f", node.geom[0]),
-			fmt.Sprintf("%f", node.geom[1]),
+			fmt.Sprintf("%d", node.OSMNode()),
+			node.ControlType().String(),
+			node.BoundaryType().String(),
+			node.ActivityType().String(),
+			node.ActivityLinkType().String(),
+			fmt.Sprintf("%d", node.Zone()),
+			fmt.Sprintf("%d", node.Intersection()),
+			fmt.Sprintf("%d", node.POI()),
+			node.OSMHighway(),
+			node.Name(),
+			fmt.Sprintf("%f", node.Geom()[0]),
+			fmt.Sprintf("%f", node.Geom()[1]),
 		})
 		if err != nil {
 			return errors.Wrap(err, "Can't write node")
@@ -73,7 +68,7 @@ func (net *Net) exportNodesToCSV(fname string) error {
 	return nil
 }
 
-func (net *Net) exportLinksToCSV(fname string) error {
+func exportLinksToCSV(macroNet *macro.Net, fname string) error {
 	file, err := os.Create(fname)
 	if err != nil {
 		return errors.Wrap(err, "Can't create file")
@@ -89,32 +84,32 @@ func (net *Net) exportLinksToCSV(fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for i := range net.Links {
-		link := net.Links[i]
-		allowedAgentTypes := make([]string, len(link.allowedAgentTypes))
-		for i, agentType := range link.allowedAgentTypes {
+	for i := range macroNet.Links {
+		link := macroNet.Links[i]
+		allowedAgentTypes := make([]string, len(link.AllowedAgentTypes()))
+		for i, agentType := range link.AllowedAgentTypes() {
 			allowedAgentTypes[i] = agentType.String()
 		}
 		err = writer.Write([]string{
 			fmt.Sprintf("%d", link.ID),
-			fmt.Sprintf("%d", link.sourceNodeID),
-			fmt.Sprintf("%d", link.targetNodeID),
-			fmt.Sprintf("%d", link.osmWayID),
-			fmt.Sprintf("%d", link.sourceOsmNodeID),
-			fmt.Sprintf("%d", link.targetOsmNodeID),
-			link.linkClass.String(),
-			link.linkConnectionType.String(),
-			link.linkType.String(),
-			link.controlType.String(),
+			fmt.Sprintf("%d", link.SourceNode()),
+			fmt.Sprintf("%d", link.TargetNode()),
+			fmt.Sprintf("%d", link.OSMWay()),
+			fmt.Sprintf("%d", link.SourceOSMNode()),
+			fmt.Sprintf("%d", link.TargetOSMNode()),
+			link.LinkClass().String(),
+			link.LinkConnectionType().String(),
+			link.LinkType().String(),
+			link.ControlType().String(),
 			strings.Join(allowedAgentTypes, ","),
-			fmt.Sprintf("%t", link.wasBidirectional),
-			fmt.Sprintf("%d", link.lanesNum),
-			fmt.Sprintf("%f", link.maxSpeed),
-			fmt.Sprintf("%f", link.freeSpeed),
-			fmt.Sprintf("%d", link.capacity),
-			fmt.Sprintf("%f", link.lengthMeters),
-			link.name,
-			wkt.MarshalString(link.geom),
+			fmt.Sprintf("%t", link.WasBidirectional()),
+			fmt.Sprintf("%d", link.LanesNum()),
+			fmt.Sprintf("%f", link.MaxSpeed()),
+			fmt.Sprintf("%f", link.FreeSpeed()),
+			fmt.Sprintf("%d", link.Capacity()),
+			fmt.Sprintf("%f", link.LengthMeters()),
+			link.Name(),
+			wkt.MarshalString(link.Geom()),
 		})
 		if err != nil {
 			return errors.Wrap(err, "Can't write link")
