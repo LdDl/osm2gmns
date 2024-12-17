@@ -23,7 +23,7 @@ func markPureCycles(nodesSet map[osm.NodeID]*wrappers.NodeOSM, ways []*wrappers.
 			cyclesNum++
 			// Assume that way has pure cycle
 			way.IsPureCycle = true
-			for _, nodeID := range way.Nodes {
+			for _, nodeID := range way.Nodes[1 : len(way.Nodes)-1] {
 				existingNode, ok := nodesSet[nodeID]
 				if !ok {
 					log.Warn().Str("scope", "ispect_pure_cycles").Any("osm_way_id", way.ID).Int("node_id", int(nodeID)).Msg("Can't find way node in nodes set")
