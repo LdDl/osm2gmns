@@ -6,7 +6,7 @@ import (
 	"github.com/LdDl/go-gmns/macro"
 
 	"github.com/LdDl/go-gmns/gmns/types"
-	"github.com/LdDl/osm2gmns/expmacro"
+	"github.com/LdDl/osm2gmns/osmmacro"
 	"github.com/LdDl/osm2gmns/wrappers"
 	"github.com/paulmach/osm"
 	"github.com/pkg/errors"
@@ -30,13 +30,12 @@ func GenerateMacroscopic(osmData *OSMWaysNodes, poi bool) (*macro.Net, error) {
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Msg("Preparing macroscopic network")
 	}
-	st := time.Now()
-	macroNet, err := expmacro.NewNetFromOSM(preparedWays, preparedNodes)
+	macroNet, err := osmmacro.NewNetFromOSM(preparedWays, preparedNodes)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't prepare macroscopic network")
 	}
 	if VERBOSE {
-		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing macroscopic network done!")
+		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Msg("Preparing macroscopic network done!")
 	}
 	return macroNet, nil
 }
@@ -76,6 +75,10 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 
 	preparedWays := make([]*wrappers.WayOSM, 0, len(ways))
 	waysPOI := make([]*wrappers.WayOSM, 0, len(ways)/2)
+	badArea := 0
+	badHighway := 0
+	badAgents := 0
+	badNodesNum := 0
 	for i := range ways {
 		way := ways[i]
 		if way.Tags.IsPOI() {
@@ -85,6 +88,7 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 
 		nodesNum := len(way.Nodes)
 		if nodesNum < 2 {
+			badNodesNum++
 			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("Unexpected number of nodes")
 			return preparedWays, nil
 		}
@@ -97,12 +101,22 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 		case wrappers.WAY_TYPE_HIGHWAY:
 			if way.WayPOI != nil {
 				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'highway' POI is not handled yet")
+				continue
 			}
-			if way.IsArea || way.IsHighwayNegligible {
+			if way.IsArea {
+				badArea++
+				continue
+			}
+			if way.IsHighwayNegligible {
+				badHighway++
 				continue
 			}
 			highwayType := types.NewHighwayTypeFrom(way.Tags.Highway)
 			linkInfo := types.NewCompositionLinkType(highwayType)
+			if linkInfo.LinkType == types.LINK_UNDEFINED && linkInfo.LinkConnectionType == types.NOT_A_LINK {
+				continue
+			}
+
 			if way.Tags.OnewayDefault {
 				// Override `oneway` for Way, but do not mutate source tags map
 				way.IsOneWay = types.NewOnewayDefault(linkInfo.LinkType)
@@ -115,6 +129,7 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 			extractedAgentTypes := types.NewAllowableAgentTypeFrom(way.Tags.MotorVehicle, way.Tags.Motorcar, way.Tags.Bicycle, way.Tags.Foot, way.Tags.Highway, way.Tags.Access, way.Tags.Service)
 			agentsIntersection := types.AgentsIntersection(extractedAgentTypes, allowedAgentTypes)
 			if len(agentsIntersection) == 0 {
+				badAgents++
 				continue
 			}
 			way.AllowedAgentTypes = make([]types.AgentType, 0, len(agentsIntersection))
@@ -148,6 +163,18 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 		default:
 			// Just skip such way
 		}
+	}
+	if badArea > 0 {
+		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badArea).Msg("Area ways")
+	}
+	if badHighway > 0 {
+		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badHighway).Msg("Unexpected highway tags")
+	}
+	if badAgents > 0 {
+		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badAgents).Msg("Ways with bad agents data")
+	}
+	if badNodesNum > 0 {
+		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badNodesNum).Msg("Ways with <2 nodes")
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "prepare_ways").Int("prepared_ways_num", len(preparedWays)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing ways done!")

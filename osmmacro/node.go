@@ -1,4 +1,4 @@
-package expmacro
+package osmmacro
 
 import (
 	"github.com/LdDl/go-gmns/gmns"

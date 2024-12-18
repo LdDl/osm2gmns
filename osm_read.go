@@ -110,11 +110,11 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 				continue
 			}
 			node := obj.(*osm.Node)
-			if _, ok := nodesSeen[node.ID]; ok {
-				delete(nodesSeen, node.ID)
-				preparedNode := wrappers.NewNodeOSMFrom(node)
-				nodes[node.ID] = preparedNode
-			}
+			// if _, ok := nodesSeen[node.ID]; ok {
+			// delete(nodesSeen, node.ID)
+			preparedNode := wrappers.NewNodeOSMFrom(node)
+			nodes[node.ID] = preparedNode
+			// }
 		}
 		err = scannerNodes.Err()
 		if err != nil {

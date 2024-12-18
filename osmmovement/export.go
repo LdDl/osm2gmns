@@ -1,4 +1,4 @@
-package expmovement
+package osmmovement
 
 import (
 	"encoding/csv"

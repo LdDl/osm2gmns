@@ -2,12 +2,14 @@ package osm2gmns
 
 import (
 	"testing"
+	"time"
 
 	"github.com/LdDl/go-gmns/generators"
 	"github.com/LdDl/go-gmns/gmns/types"
-	"github.com/LdDl/osm2gmns/expmacro"
-	"github.com/LdDl/osm2gmns/expmeso"
-	"github.com/LdDl/osm2gmns/expmovement"
+	"github.com/LdDl/osm2gmns/osmmacro"
+	"github.com/LdDl/osm2gmns/osmmeso"
+	"github.com/LdDl/osm2gmns/osmmovement"
+	"github.com/rs/zerolog/log"
 )
 
 func TestParser(t *testing.T) {
@@ -31,23 +33,31 @@ func TestParser(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
+	st := time.Now()
 	movements, err := generators.GenerateMovements(macroNet)
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	if VERBOSE {
+		log.Info().Str("scope", "gen_movement").Int("movements_num", len(movements)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating movements done!")
+	}
 
-	err = expmacro.ExportToCSV(macroNet, "test_data/NEW_test.csv")
+	err = osmmacro.ExportToCSV(macroNet, "test_data/osm-NEW_test.csv")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = expmovement.ExportToCSV(movements, "test_data/NEW_test_movement.csv")
+	err = osmmovement.ExportToCSV(movements, "test_data/osm-NEW_test_movement.csv")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
+	t.Error(0)
+	return
+	generators.VERBOSE = VERBOSE
 	mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
 	if err != nil {
 		t.Error(err)
@@ -55,8 +65,8 @@ func TestParser(t *testing.T) {
 	}
 
 	// @todo
-	t.Error("start export mesoscopic")
-	err = expmeso.ExportToCSV(mesoNet, "test_data/NEW_test_meso.csv")
+	// t.Error("start export mesoscopic")
+	err = osmmeso.ExportToCSV(mesoNet, "test_data/osm-NEW_test_meso.csv")
 	if err != nil {
 		t.Error(err)
 		return

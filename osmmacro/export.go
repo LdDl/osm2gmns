@@ -1,4 +1,4 @@
-package expmacro
+package osmmacro
 
 import (
 	"encoding/csv"

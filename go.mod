@@ -3,24 +3,21 @@ module github.com/LdDl/osm2gmns
 go 1.23.4
 
 require (
-	github.com/elliotchance/orderedmap v1.7.0
+	github.com/LdDl/go-gmns v0.0.0-20241216095807-36385b8ee723
 	github.com/paulmach/orb v0.11.1
 	github.com/paulmach/osm v0.8.0
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.31.0
-	github.com/stretchr/testify v1.9.0
+	github.com/rs/zerolog v1.33.0
 )
 
 require (
-	github.com/LdDl/go-gmns v0.0.0-20241215155005-95a871853d35 // indirect
 	github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/elliotchance/orderedmap v1.7.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/paulmach/protoscan v0.2.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -1,4 +1,4 @@
-package expmeso
+package osmmeso
 
 import (
 	"fmt"
