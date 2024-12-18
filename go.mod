@@ -3,7 +3,7 @@ module github.com/LdDl/osm2gmns
 go 1.23.4
 
 require (
-	github.com/LdDl/go-gmns v0.0.0-20241216095807-36385b8ee723
+	github.com/LdDl/go-gmns v0.0.0-20241218131054-3be99f732d81
 	github.com/paulmach/orb v0.11.1
 	github.com/paulmach/osm v0.8.0
 	github.com/pkg/errors v0.9.1
@@ -17,7 +17,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/paulmach/protoscan v0.2.1 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	go.mongodb.org/mongo-driver v1.11.4 // indirect
+	go.mongodb.org/mongo-driver v1.17.1 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )

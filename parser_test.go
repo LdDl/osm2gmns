@@ -55,20 +55,22 @@ func TestParser(t *testing.T) {
 		return
 	}
 
-	t.Error(0)
-	return
 	generators.VERBOSE = VERBOSE
 	mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	if VERBOSE {
+		log.Info().Str("scope", "gen_meso").Int("meso_nodes_num", len(mesoNet.Nodes)).Int("meso_links_num", len(mesoNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating meso done!")
+	}
 
-	// @todo
-	// t.Error("start export mesoscopic")
 	err = osmmeso.ExportToCSV(mesoNet, "test_data/osm-NEW_test_meso.csv")
 	if err != nil {
 		t.Error(err)
 		return
 	}
+
+	// @todo
+	t.Error("start micro")
 }
