@@ -75,7 +75,7 @@ func exportLinksToCSV(mesoNet *meso.Net, fname string) error {
 	defer writer.Flush()
 	writer.Comma = ';'
 
-	err = writer.Write([]string{"id", "source_node", "target_node", "osm_way_id", "source_osm_node_id", "target_osm_node_id", "link_class", "is_link", "link_type", "control_type", "allowed_agent_types", "was_bidirectional", "lanes", "max_speed", "free_speed", "capacity", "length_meters", "name", "geom"})
+	err = writer.Write([]string{"id", "source_node", "target_node", "macro_node_id", "macro_link_id", "link_type", "control_type", "movement_id", "movement_composite_type", "allowed_agent_types", "lanes", "free_speed", "capacity", "length_meters", "geom"})
 	if err != nil {
 		return errors.Wrap(err, "Can't write header")
 	}
