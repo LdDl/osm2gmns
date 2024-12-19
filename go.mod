@@ -3,7 +3,7 @@ module github.com/LdDl/osm2gmns
 go 1.23.4
 
 require (
-	github.com/LdDl/go-gmns v0.0.0-20241218131054-3be99f732d81
+	github.com/LdDl/go-gmns v0.0.0-20241219173913-d335b646c759
 	github.com/paulmach/orb v0.11.1
 	github.com/paulmach/osm v0.8.0
 	github.com/pkg/errors v0.9.1
