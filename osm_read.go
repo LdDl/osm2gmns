@@ -22,7 +22,7 @@ var (
 	ErrBadFileExtension = fmt.Errorf("bad file extension")
 )
 
-func guessParserType(filename string) (ParserType, error) {
+func GuessParserType(filename string) (ParserType, error) {
 	ext := filepath.Ext(filename)
 	switch ext {
 	case ".osm", ".xml":
@@ -41,7 +41,7 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 		log.Info().Str("scope", "osm_read").Str("filename", filename).Msg("Opening file")
 	}
 
-	parserType, err := guessParserType(filename)
+	parserType, err := GuessParserType(filename)
 	if err != nil {
 		return nil, err
 	}
