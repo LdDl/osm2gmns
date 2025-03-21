@@ -14,8 +14,8 @@ type OSMScanner interface {
 }
 
 type OSMWaysNodes struct {
-	nodes map[osm.NodeID]*wrappers.NodeOSM
-	ways  []*wrappers.WayOSM
+	Nodes map[osm.NodeID]*wrappers.NodeOSM
+	Ways  []*wrappers.WayOSM
 
-	allowedAgentTypes []types.AgentType
+	AllowedAgentTypes []types.AgentType
 }

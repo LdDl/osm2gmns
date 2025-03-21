@@ -14,7 +14,7 @@ import (
 )
 
 func GenerateMacroscopic(osmData *OSMWaysNodes, poi bool) (*macro.Net, error) {
-	ways, nodesSet, allowedAgentTypes := osmData.ways, osmData.nodes, osmData.allowedAgentTypes
+	ways, nodesSet, allowedAgentTypes := osmData.Ways, osmData.Nodes, osmData.AllowedAgentTypes
 	preparedWays, err := prepareWays(ways, nodesSet, allowedAgentTypes)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't prepare ways")

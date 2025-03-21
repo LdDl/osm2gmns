@@ -157,11 +157,11 @@ func ReadOSMFromFile(file *os.File, parserType ParserType, allowedAgentTypes []t
 	}
 
 	osmData := &OSMWaysNodes{
-		ways:              ways,
-		nodes:             nodes,
-		allowedAgentTypes: make([]types.AgentType, len(allowedAgentTypes)),
+		Ways:              ways,
+		Nodes:             nodes,
+		AllowedAgentTypes: make([]types.AgentType, len(allowedAgentTypes)),
 	}
-	copy(osmData.allowedAgentTypes, allowedAgentTypes)
+	copy(osmData.AllowedAgentTypes, allowedAgentTypes)
 	return osmData, nil
 }
 
@@ -266,10 +266,10 @@ func ReadOSMFromFileMultipart(bufReader multipart.File, parserType ParserType, a
 	}
 
 	osmData := &OSMWaysNodes{
-		ways:              ways,
-		nodes:             nodes,
-		allowedAgentTypes: make([]types.AgentType, len(allowedAgentTypes)),
+		Ways:              ways,
+		Nodes:             nodes,
+		AllowedAgentTypes: make([]types.AgentType, len(allowedAgentTypes)),
 	}
-	copy(osmData.allowedAgentTypes, allowedAgentTypes)
+	copy(osmData.AllowedAgentTypes, allowedAgentTypes)
 	return osmData, nil
 }
