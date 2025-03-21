@@ -7,6 +7,20 @@ import (
 	"github.com/LdDl/go-gmns/gmns/types"
 )
 
+type ParserType uint16
+
+const (
+	PARSE_UNDEFINED = ParserType(iota)
+	PARSER_XML
+	PARSER_PBF
+)
+
+var parserTypeStr = [3]string{"undefined", "xml", "pbf"}
+
+func (iotaIdx ParserType) String() string {
+	return parserTypeStr[iotaIdx]
+}
+
 type Parser struct {
 	filename          string
 	networkTypes      []string

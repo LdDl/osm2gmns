@@ -1,6 +1,7 @@
 package osm2gmns
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -17,18 +18,43 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var (
+	ErrBadFileExtension = fmt.Errorf("bad file extension")
+)
+
+func guessParserType(filename string) (ParserType, error) {
+	ext := filepath.Ext(filename)
+	switch ext {
+	case ".osm", ".xml":
+		return PARSER_XML, nil
+	case ".pbf", ".osm.pbf":
+		return PARSER_PBF, nil
+	default:
+		return PARSE_UNDEFINED, errors.Wrapf(ErrBadFileExtension, "Filename: '%s', Extension: '%s'", filename, ext)
+	}
+}
+
 func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 	filename, poi := parser.filename, parser.preparePOI
 	_ = poi
 	if VERBOSE {
 		log.Info().Str("scope", "osm_read").Str("filename", filename).Msg("Opening file")
 	}
+
+	parserType, err := guessParserType(filename)
+	if err != nil {
+		return nil, err
+	}
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
+	return ReadOSMFromFile(file, parserType, parser.allowedAgentTypes)
+}
 
+func ReadOSMFromFile(file *os.File, parserType ParserType, allowedAgentTypes []types.AgentType) (*OSMWaysNodes, error) {
 	/* Process ways */
 	if VERBOSE {
 		log.Info().Str("scope", "osm_read").Msg("Processing ways")
@@ -39,16 +65,15 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 	nodesSeen := make(map[osm.NodeID]struct{})
 	{
 		var scannerWays OSMScanner
-
+		bufReader := bufio.NewReaderSize(file, 128*1024*1024)
 		// Guess file extension and prepare correct scanner for ways
-		ext := filepath.Ext(filename)
-		switch ext {
-		case ".osm", ".xml":
-			scannerWays = osmxml.New(context.Background(), file)
-		case ".pbf", ".osm.pbf":
+		switch parserType {
+		case PARSER_XML:
+			scannerWays = osmxml.New(context.Background(), bufReader)
+		case PARSER_PBF:
 			scannerWays = osmpbf.New(context.Background(), file, 4)
 		default:
-			return nil, fmt.Errorf("file extension '%s' for file '%s' is not handled yet", ext, filename)
+			return nil, fmt.Errorf("file extension '%s' is not handled yet", parserType)
 		}
 		defer scannerWays.Close()
 
@@ -66,7 +91,7 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 			}
 			ways = append(ways, preparedWay)
 		}
-		err = scannerWays.Err()
+		err := scannerWays.Err()
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +101,7 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 		log.Info().Str("scope", "osm_read").Float64("elapsed", time.Since(st).Seconds()).Msg("Processing ways done!")
 	}
 	// Seek file to start
-	_, err = file.Seek(0, io.SeekStart)
+	_, err := file.Seek(0, io.SeekStart)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't repeat seeking after ways scanning")
 	}
@@ -92,14 +117,13 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 		var scannerNodes OSMScanner
 
 		// Guess file extension and prepare correct scanner for ways
-		ext := filepath.Ext(filename)
-		switch ext {
-		case ".osm", ".xml":
+		switch parserType {
+		case PARSER_XML:
 			scannerNodes = osmxml.New(context.Background(), file)
-		case ".pbf", ".osm.pbf":
+		case PARSER_PBF:
 			scannerNodes = osmpbf.New(context.Background(), file, 4)
 		default:
-			return nil, fmt.Errorf("file extension '%s' for file '%s' is not handled yet", ext, filename)
+			return nil, fmt.Errorf("file extension '%s' is not handled yet", parserType)
 		}
 		defer scannerNodes.Close()
 
@@ -134,9 +158,8 @@ func (parser *Parser) ReadOSM() (*OSMWaysNodes, error) {
 	osmData := &OSMWaysNodes{
 		ways:              ways,
 		nodes:             nodes,
-		allowedAgentTypes: make([]types.AgentType, len(parser.allowedAgentTypes)),
+		allowedAgentTypes: make([]types.AgentType, len(allowedAgentTypes)),
 	}
-	copy(osmData.allowedAgentTypes, parser.allowedAgentTypes)
-
+	copy(osmData.allowedAgentTypes, allowedAgentTypes)
 	return osmData, nil
 }

@@ -15,6 +15,8 @@ import (
 func TestParser(t *testing.T) {
 	parser := NewParser(
 		"./sample.osm",
+		// "/home/dimitrii/Downloads/База данных/MoscowOSM/moscow.osm",
+		// "/home/dimitrii/Downloads/База данных/tula_sovetskaya.osm"
 		WithPreparePOI(false),
 		WithStrictMode(false),
 		WithVerbose(true),
