@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/LdDl/go-gmns/generators"
 	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/osm2gmns"
-	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	// Explicitly set global variables for logging (those are defaults actually)
+	osm2gmns.VERBOSE = true
+	osm2gmns.SUPPRESS_WARNINGS = false
+
 	parser := osm2gmns.NewParser(
 		"./sample.osm",
 		osm2gmns.WithPreparePOI(false),
@@ -30,19 +32,22 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	fmt.Println("macro nodes num", len(macroNet.Nodes))
+	fmt.Println("macro links num", len(macroNet.Links))
 
-	st := time.Now()
 	movements, err := generators.GenerateMovements(macroNet)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	log.Info().Str("scope", "gen_movement").Int("movements_num", len(movements)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating movements done!")
+	fmt.Println("movements_num", len(movements))
 
 	mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	log.Info().Str("scope", "gen_meso").Int("meso_nodes_num", len(mesoNet.Nodes)).Int("meso_links_num", len(mesoNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating meso done!")
+
+	fmt.Println("meso nodes num", len(mesoNet.Nodes))
+	fmt.Println("meso links num", len(mesoNet.Links))
 }
