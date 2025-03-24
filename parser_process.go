@@ -89,7 +89,9 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 		nodesNum := len(way.Nodes)
 		if nodesNum < 2 {
 			badNodesNum++
-			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("Unexpected number of nodes")
+			if !SUPPRESS_WARNINGS {
+				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("Unexpected number of nodes")
+			}
 			return preparedWays, nil
 		}
 		way.OsmSourceNodeID = way.Nodes[0]
@@ -100,7 +102,9 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 		switch way.WayType {
 		case wrappers.WAY_TYPE_HIGHWAY:
 			if way.WayPOI != nil {
-				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'highway' POI is not handled yet")
+				if !SUPPRESS_WARNINGS {
+					log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'highway' POI is not handled yet")
+				}
 				continue
 			}
 			if way.IsArea {
@@ -140,7 +144,9 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 			for _, nodeID := range way.Nodes {
 				existingNode, ok := nodesSet[nodeID]
 				if !ok {
-					log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("node_id", int(nodeID)).Msg("Can't find way node in nodes set")
+					if !SUPPRESS_WARNINGS {
+						log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("node_id", int(nodeID)).Msg("Can't find way node in nodes set")
+					}
 					return preparedWays, nil
 				}
 				existingNode.UseCount++
@@ -151,30 +157,46 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 			// Append processed way to the filtered list
 			preparedWays = append(preparedWays, way)
 		case wrappers.WAY_TYPE_RAILWAY:
-			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'railway' is not handled yet")
+			if !SUPPRESS_WARNINGS {
+				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'railway' is not handled yet")
+			}
 			if way.WayPOI != nil && way.WayPOI.PoiType == types.POI_TYPE_RAILWAY {
-				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'railway' POI is not handled yet")
+				if !SUPPRESS_WARNINGS {
+					log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'railway' POI is not handled yet")
+				}
 			}
 		case wrappers.WAY_TYPE_AEROWAY:
-			log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'airway' is not handled yet")
+			if !SUPPRESS_WARNINGS {
+				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'airway' is not handled yet")
+			}
 			if way.WayPOI != nil && way.WayPOI.PoiType == types.POI_TYPE_AEROWAY {
-				log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'aeroway' POI is not handled yet")
+				if !SUPPRESS_WARNINGS {
+					log.Warn().Str("scope", "prepare_ways").Any("osm_way_id", way.ID).Int("nodes", nodesNum).Msg("'aeroway' POI is not handled yet")
+				}
 			}
 		default:
 			// Just skip such way
 		}
 	}
 	if badArea > 0 {
-		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badArea).Msg("Area ways")
+		if !SUPPRESS_WARNINGS {
+			log.Warn().Str("scope", "prepare_ways").Int("ways_num", badArea).Msg("Area ways")
+		}
 	}
 	if badHighway > 0 {
-		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badHighway).Msg("Unexpected highway tags")
+		if !SUPPRESS_WARNINGS {
+			log.Warn().Str("scope", "prepare_ways").Int("ways_num", badHighway).Msg("Unexpected highway tags")
+		}
 	}
 	if badAgents > 0 {
-		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badAgents).Msg("Ways with bad agents data")
+		if !SUPPRESS_WARNINGS {
+			log.Warn().Str("scope", "prepare_ways").Int("ways_num", badAgents).Msg("Ways with bad agents data")
+		}
 	}
 	if badNodesNum > 0 {
-		log.Warn().Str("scope", "prepare_ways").Int("ways_num", badNodesNum).Msg("Ways with <2 nodes")
+		if !SUPPRESS_WARNINGS {
+			log.Warn().Str("scope", "prepare_ways").Int("ways_num", badNodesNum).Msg("Ways with <2 nodes")
+		}
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "prepare_ways").Int("prepared_ways_num", len(preparedWays)).Float64("elapsed", time.Since(st).Seconds()).Msg("Preparing ways done!")

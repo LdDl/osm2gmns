@@ -11,5 +11,6 @@ func init() {
 }
 
 var (
-	VERBOSE = true
+	VERBOSE           = true
+	SUPPRESS_WARNINGS = false
 )
