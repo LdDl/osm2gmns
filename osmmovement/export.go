@@ -4,8 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/movement"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
@@ -27,8 +29,16 @@ func ExportToCSV(mvmtStorage movement.MovementsStorage, fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for k := range mvmtStorage {
-		mvmt := mvmtStorage[k]
+	// Sort movement IDs for deterministic output
+	sortedMvmtIDs := make([]gmns.MovementID, 0, len(mvmtStorage))
+	for id := range mvmtStorage {
+		sortedMvmtIDs = append(sortedMvmtIDs, id)
+	}
+	sort.Slice(sortedMvmtIDs, func(i, j int) bool {
+		return sortedMvmtIDs[i] < sortedMvmtIDs[j]
+	})
+	for _, mvmtID := range sortedMvmtIDs {
+		mvmt := mvmtStorage[mvmtID]
 		allowedAgentTypes := make([]string, len(mvmt.AllowedAgentTypes()))
 		for i, agentType := range mvmt.AllowedAgentTypes() {
 			allowedAgentTypes[i] = agentType.String()

@@ -4,8 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/meso"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
@@ -45,8 +47,16 @@ func exportNodesToCSV(mesoNet *meso.Net, fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for i := range mesoNet.Nodes {
-		node := mesoNet.Nodes[i]
+	// Sort node IDs for deterministic output
+	sortedNodeIDs := make([]gmns.NodeID, 0, len(mesoNet.Nodes))
+	for id := range mesoNet.Nodes {
+		sortedNodeIDs = append(sortedNodeIDs, id)
+	}
+	sort.Slice(sortedNodeIDs, func(i, j int) bool {
+		return sortedNodeIDs[i] < sortedNodeIDs[j]
+	})
+	for _, nodeID := range sortedNodeIDs {
+		node := mesoNet.Nodes[nodeID]
 		err = writer.Write([]string{
 			fmt.Sprintf("%d", node.ID),
 			fmt.Sprintf("%d", node.MacroZone()),
@@ -80,8 +90,16 @@ func exportLinksToCSV(mesoNet *meso.Net, fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for i := range mesoNet.Links {
-		link := mesoNet.Links[i]
+	// Sort link IDs for deterministic output
+	sortedLinkIDs := make([]gmns.LinkID, 0, len(mesoNet.Links))
+	for id := range mesoNet.Links {
+		sortedLinkIDs = append(sortedLinkIDs, id)
+	}
+	sort.Slice(sortedLinkIDs, func(i, j int) bool {
+		return sortedLinkIDs[i] < sortedLinkIDs[j]
+	})
+	for _, linkID := range sortedLinkIDs {
+		link := mesoNet.Links[linkID]
 		allowedAgentTypes := make([]string, len(link.AllowedAgentTypes()))
 		for i, agentType := range link.AllowedAgentTypes() {
 			allowedAgentTypes[i] = agentType.String()

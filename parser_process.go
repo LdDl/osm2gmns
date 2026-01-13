@@ -1,6 +1,7 @@
 package osm2gmns
 
 import (
+	"sort"
 	"time"
 
 	"github.com/LdDl/go-gmns/macro"
@@ -140,6 +141,10 @@ func prepareWays(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Node
 			for agentType := range agentsIntersection {
 				way.AllowedAgentTypes = append(way.AllowedAgentTypes, agentType)
 			}
+			// Sort for deterministic order
+			sort.Slice(way.AllowedAgentTypes, func(i, j int) bool {
+				return way.AllowedAgentTypes[i] < way.AllowedAgentTypes[j]
+			})
 			// Increment nodes uses
 			for _, nodeID := range way.Nodes {
 				existingNode, ok := nodesSet[nodeID]

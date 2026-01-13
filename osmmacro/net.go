@@ -2,6 +2,7 @@ package osmmacro
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/gmns/types"
@@ -157,7 +158,16 @@ func genBoundaryAndActivityType(macroNet *macro.Net) error {
 		if linkTypesCounters, ok := nodesLinkTypesCounters[nodeID]; ok {
 			maxLinkTypes := []types.LinkType{types.LINK_UNDEFINED}
 			maxLinkTypeCount := 0
-			for linkType, counter := range linkTypesCounters {
+			// Sort link types for deterministic iteration
+			sortedLinkTypes := make([]types.LinkType, 0, len(linkTypesCounters))
+			for linkType := range linkTypesCounters {
+				sortedLinkTypes = append(sortedLinkTypes, linkType)
+			}
+			sort.Slice(sortedLinkTypes, func(i, j int) bool {
+				return sortedLinkTypes[i] < sortedLinkTypes[j]
+			})
+			for _, linkType := range sortedLinkTypes {
+				counter := linkTypesCounters[linkType]
 				if counter > maxLinkTypeCount {
 					maxLinkTypeCount = counter
 					maxLinkTypes = append(maxLinkTypes, linkType)

@@ -4,8 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/macro"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
@@ -44,8 +46,16 @@ func exportNodesToCSV(macroNet *macro.Net, fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for i := range macroNet.Nodes {
-		node := macroNet.Nodes[i]
+	// Sort node IDs for deterministic output
+	sortedNodeIDs := make([]gmns.NodeID, 0, len(macroNet.Nodes))
+	for id := range macroNet.Nodes {
+		sortedNodeIDs = append(sortedNodeIDs, id)
+	}
+	sort.Slice(sortedNodeIDs, func(i, j int) bool {
+		return sortedNodeIDs[i] < sortedNodeIDs[j]
+	})
+	for _, nodeID := range sortedNodeIDs {
+		node := macroNet.Nodes[nodeID]
 		err = writer.Write([]string{
 			fmt.Sprintf("%d", node.ID),
 			fmt.Sprintf("%d", node.OSMNode()),
@@ -84,8 +94,16 @@ func exportLinksToCSV(macroNet *macro.Net, fname string) error {
 		return errors.Wrap(err, "Can't write header")
 	}
 
-	for i := range macroNet.Links {
-		link := macroNet.Links[i]
+	// Sort link IDs for deterministic output
+	sortedLinkIDs := make([]gmns.LinkID, 0, len(macroNet.Links))
+	for id := range macroNet.Links {
+		sortedLinkIDs = append(sortedLinkIDs, id)
+	}
+	sort.Slice(sortedLinkIDs, func(i, j int) bool {
+		return sortedLinkIDs[i] < sortedLinkIDs[j]
+	})
+	for _, linkID := range sortedLinkIDs {
+		link := macroNet.Links[linkID]
 		allowedAgentTypes := make([]string, len(link.AllowedAgentTypes()))
 		for i, agentType := range link.AllowedAgentTypes() {
 			allowedAgentTypes[i] = agentType.String()
