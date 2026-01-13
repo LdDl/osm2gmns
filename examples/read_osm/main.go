@@ -6,6 +6,10 @@ import (
 	"github.com/LdDl/go-gmns/generators"
 	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/osm2gmns"
+	"github.com/LdDl/osm2gmns/osmmacro"
+	"github.com/LdDl/osm2gmns/osmmeso"
+	"github.com/LdDl/osm2gmns/osmmicro"
+	"github.com/LdDl/osm2gmns/osmmovement"
 )
 
 func main() {
@@ -50,4 +54,35 @@ func main() {
 
 	fmt.Println("meso nodes num", len(mesoNet.Nodes))
 	fmt.Println("meso links num", len(mesoNet.Links))
+
+	microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("micro nodes num", len(microNet.Nodes))
+	fmt.Println("micro links num", len(microNet.Links))
+
+	// Export to CSV
+	err = osmmacro.ExportToCSV(macroNet, "./output.csv")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = osmmovement.ExportToCSV(movements, "./output.csv")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = osmmeso.ExportToCSV(mesoNet, "./output.csv")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = osmmicro.ExportToCSV(microNet, "./output.csv")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("Export done")
 }

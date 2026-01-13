@@ -8,6 +8,7 @@ import (
 	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/osm2gmns/osmmacro"
 	"github.com/LdDl/osm2gmns/osmmeso"
+	"github.com/LdDl/osm2gmns/osmmicro"
 	"github.com/LdDl/osm2gmns/osmmovement"
 	"github.com/rs/zerolog/log"
 )
@@ -73,6 +74,19 @@ func TestParser(t *testing.T) {
 		return
 	}
 
-	// @todo
-	t.Error("start micro")
+	st = time.Now()
+	microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if VERBOSE {
+		log.Info().Str("scope", "gen_micro").Int("micro_nodes_num", len(microNet.Nodes)).Int("micro_links_num", len(microNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating micro done!")
+	}
+
+	err = osmmicro.ExportToCSV(microNet, "test_data/osm-NEW_test_micro.csv")
+	if err != nil {
+		t.Error(err)
+		return
+	}
 }

@@ -76,9 +76,16 @@ W.I.P.
 		    fmt.Println(err)
 		    return
 	    }
-
 	    fmt.Println("meso nodes num", len(mesoNet.Nodes))
 	    fmt.Println("meso links num", len(mesoNet.Links))
+
+	    microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
+	    if err != nil {
+		    fmt.Println(err)
+		    return
+	    }
+	    fmt.Println("micro nodes num", len(microNet.Nodes))
+	    fmt.Println("micro links num", len(microNet.Links))
     }
     ```
 
