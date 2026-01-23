@@ -1,23 +1,91 @@
 ## osm2gmns
-Just port of https://github.com/jiawlu/OSM2GMNS in Golang.
 
-This tool allows to prepare routable graph of a given OSM road network with three levels of detalization:
-1) Macroscopic + movements layer;
-    * Images: W.I.P.
-    * Data and fields description: W.I.P.
+Go port of [OSM2GMNS](https://github.com/jiawlu/OSM2GMNS) - convert OpenStreetMap data to GMNS format.
 
-2) Mesoscopic;
-    * Images: W.I.P.
-    * Data and fields description: W.I.P.
+This tool prepares a routable graph from OSM road network with three levels of detail:
+1. **Macroscopic** + movements layer
+2. **Mesoscopic** (lane-level)
+3. **Microscopic** (cell-based)
 
-3) Microscopic.
-    * Images: W.I.P.
-    * Data and fields description: W.I.P.
+See [go-gmns](https://github.com/LdDl/go-gmns) for data format documentation.
 
-Stage: **W.I.P.**
+## Installation
 
-* How to use as binary executable
-W.I.P.
+### Option 1: Go install
+
+```shell
+go install github.com/LdDl/osm2gmns/cmd/osm2gmns@latest
+```
+
+### Option 2: Download binary
+
+Download the latest release from [GitHub Releases](https://github.com/LdDl/osm2gmns/releases).
+
+**Linux/macOS:**
+```shell
+tar -xzf osm2gmns-*-linux-amd64.tar.gz
+chmod +x osm2gmns-linux-amd64/osm2gmns
+sudo mv osm2gmns-linux-amd64/osm2gmns /usr/local/bin/
+```
+
+**Windows:**
+Extract the zip file and add the folder to your PATH.
+
+### Option 3: Docker
+
+```shell
+docker pull dimahkiin/osm2gmns:latest
+```
+
+## CLI Usage
+
+```shell
+# Basic usage - generate all network levels
+osm2gmns -input map.osm -output ./results
+
+# Generate only macro and meso networks
+osm2gmns -input map.osm.pbf -networks macro,meso -output ./results
+
+# Specify agent types
+osm2gmns -input map.osm -agents auto,bike -output ./results
+
+# Quiet mode
+osm2gmns -input map.osm -output ./results -verbose=false
+
+# Show version
+osm2gmns -version
+
+# Show help
+osm2gmns -help
+```
+
+### CLI Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-input` | (required) | Input OSM file path (.osm or .osm.pbf) |
+| `-output` | `./output` | Output directory for CSV files |
+| `-networks` | `macro,movement,meso,micro` | Network levels to generate |
+| `-agents` | `auto,bike,walk` | Allowed agent types |
+| `-verbose` | `true` | Enable verbose output |
+| `-suppress-warnings` | `false` | Suppress warning messages |
+| `-strict` | `false` | Enable strict mode |
+| `-poi` | `false` | Prepare POI data |
+| `-version` | - | Show version information |
+
+### Docker Usage
+
+```shell
+# Process local OSM file
+docker run -v $(pwd):/data dimahkiin/osm2gmns -input /data/map.osm -output /data/results
+
+# With specific options
+docker run -v $(pwd):/data dimahkiin/osm2gmns \
+    -input /data/map.osm.pbf \
+    -output /data/results \
+    -networks macro,meso \
+    -agents auto
+```
 
 * How to use as a package
   - Get latest version of the package
