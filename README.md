@@ -87,6 +87,27 @@ docker run -v $(pwd):/data dimahkiin/osm2gmns \
     -agents auto
 ```
 
+## Data Preparation
+
+For large OSM files, consider preprocessing with [osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert) to reduce size:
+
+**Install osmconvert (Linux):**
+```shell
+wget -O - http://m.m.i24.cc/osmconvert.c | cc -x c - -lz -O3 -o osmconvert
+sudo mv osmconvert /usr/local/bin/
+```
+
+**Convert and filter:**
+```shell
+# Convert XML to PBF (smaller, faster to parse)
+osmconvert map.osm --out-pbf -o=map.osm.pbf
+
+# Remove metadata to reduce size
+osmconvert map.osm --drop-author --drop-version --out-pbf -o=map.osm.pbf
+```
+
+## Library Usage
+
 * How to use as a package
   - Get latest version of the package
     ```shell
