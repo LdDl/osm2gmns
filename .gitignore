@@ -2,5 +2,5 @@ sample.osm
 test_data/*
 build/
 dist/
-osm2gmns
-osm2gmns.exe
+/osm2gmns
+/osm2gmns.exe
