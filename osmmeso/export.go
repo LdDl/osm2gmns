@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -13,10 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ExportToCSV(mesoNet *meso.Net, fname string) error {
-	fnameParts := strings.Split(fname, ".csv")
-	fnameNodes := fmt.Sprintf(fnameParts[0] + "_meso_nodes.csv")
-	fnameLinks := fmt.Sprintf(fnameParts[0] + "_meso_links.csv")
+func ExportToCSV(mesoNet *meso.Net, outputDir string) error {
+	fnameNodes := filepath.Join(outputDir, "mesonode.csv")
+	fnameLinks := filepath.Join(outputDir, "mesolink.csv")
 
 	err := exportNodesToCSV(mesoNet, fnameNodes)
 	if err != nil {

@@ -165,7 +165,7 @@ func main() {
 		}
 
 		if levels["movement"] {
-			if err := osmmovement.ExportToCSV(movements, *outputDir); err != nil {
+			if err := osmmovement.ExportToCSV(movements, filepath.Join(*outputDir, "movement.csv")); err != nil {
 				fmt.Fprintf(os.Stderr, "Error exporting movements: %v\n", err)
 				os.Exit(1)
 			}

@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -13,10 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ExportToCSV(microNet *micro.Net, fname string) error {
-	fnameParts := strings.Split(fname, ".csv")
-	fnameNodes := fmt.Sprintf(fnameParts[0] + "_micro_nodes.csv")
-	fnameLinks := fmt.Sprintf(fnameParts[0] + "_micro_links.csv")
+func ExportToCSV(microNet *micro.Net, outputDir string) error {
+	fnameNodes := filepath.Join(outputDir, "micronode.csv")
+	fnameLinks := filepath.Join(outputDir, "microlink.csv")
 
 	err := exportNodesToCSV(microNet, fnameNodes)
 	if err != nil {
