@@ -1,5 +1,5 @@
-github.com/LdDl/go-gmns v0.0.0-20260113131758-64cce94a5b9a h1:WqYRR+7tHLgocgNg+yO2cjMFv4C8wyK5/dFpgZqIvhQ=
-github.com/LdDl/go-gmns v0.0.0-20260113131758-64cce94a5b9a/go.mod h1:tKHVkSNwwoYPXJac3LjV++grmJuKWq/pwK92ooKnDrU=
+github.com/LdDl/go-gmns v0.0.0-20260123160740-627224287f48 h1:S4joaYSMbV16JtgWJVU6qq77yoedPOve5B8X9lL96wI=
+github.com/LdDl/go-gmns v0.0.0-20260123160740-627224287f48/go.mod h1:tKHVkSNwwoYPXJac3LjV++grmJuKWq/pwK92ooKnDrU=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2 h1:ISaMhBq2dagaoptFGUyywT5SzpysCbHofX3sCNw1djo=
 github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2/go.mod h1:2yDaWzisHKoQoxm+EU4YgKBaD7g1M0pxy7THWG44Lro=
