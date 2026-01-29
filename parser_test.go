@@ -47,12 +47,12 @@ func TestParser(t *testing.T) {
 		log.Info().Str("scope", "gen_movement").Int("movements_num", len(movements)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating movements done!")
 	}
 
-	err = osmmacro.ExportToCSV(macroNet, "test_data/osm-NEW_test.csv")
+	err = osmmacro.ExportToCSV(macroNet, "test_data")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = osmmovement.ExportToCSV(movements, "test_data/osm-NEW_test_movement.csv")
+	err = osmmovement.ExportToCSV(movements, "test_data/movement.csv")
 	if err != nil {
 		t.Error(err)
 		return
@@ -68,7 +68,7 @@ func TestParser(t *testing.T) {
 		log.Info().Str("scope", "gen_meso").Int("meso_nodes_num", len(mesoNet.Nodes)).Int("meso_links_num", len(mesoNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating meso done!")
 	}
 
-	err = osmmeso.ExportToCSV(mesoNet, "test_data/osm-NEW_test_meso.csv")
+	err = osmmeso.ExportToCSV(mesoNet, "test_data")
 	if err != nil {
 		t.Error(err)
 		return
@@ -84,7 +84,7 @@ func TestParser(t *testing.T) {
 		log.Info().Str("scope", "gen_micro").Int("micro_nodes_num", len(microNet.Nodes)).Int("micro_links_num", len(microNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating micro done!")
 	}
 
-	err = osmmicro.ExportToCSV(microNet, "test_data/osm-NEW_test_micro.csv")
+	err = osmmicro.ExportToCSV(microNet, "test_data")
 	if err != nil {
 		t.Error(err)
 		return
