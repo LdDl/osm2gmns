@@ -28,6 +28,7 @@ func main() {
 	// Define flags
 	inputFile := flag.String("input", "", "Input OSM file path (.osm or .osm.pbf)")
 	outputDir := flag.String("output", "./output", "Output directory for CSV files")
+	geometryMode := flag.String("geometry", string(osmmacro.GEOMETRY_INLINE), "Macro geometry storage: inline or shared (geometry.csv)")
 	networkLevels := flag.String("networks", "macro,movement,meso,micro", "Comma-separated network levels to generate: macro,movement,meso,micro")
 	agentTypes := flag.String("agents", "auto,bike,walk", "Comma-separated allowed agent types: auto,bike,walk")
 	verbose := flag.Bool("verbose", true, "Enable verbose output")
@@ -72,6 +73,14 @@ func main() {
 	levels := parseNetworkLevels(*networkLevels)
 	if len(levels) == 0 {
 		fmt.Fprintln(os.Stderr, "Error: at least one network level must be specified")
+		os.Exit(1)
+	}
+	if *geometryMode != string(osmmacro.GEOMETRY_INLINE) && *geometryMode != string(osmmacro.GEOMETRY_SHARED) {
+		fmt.Fprintf(os.Stderr, "Error: unsupported geometry mode %q; expected inline or shared\n", *geometryMode)
+		os.Exit(1)
+	}
+	if *geometryMode == string(osmmacro.GEOMETRY_SHARED) && !levels["macro"] {
+		fmt.Fprintln(os.Stderr, "Error: -geometry shared requires macro in -networks")
 		os.Exit(1)
 	}
 
@@ -138,7 +147,8 @@ func main() {
 
 	// Export macro network
 	if levels["macro"] {
-		if err := osmmacro.ExportToCSV(macroNet, *outputDir); err != nil {
+		err = osmmacro.ExportToCSVWithGeometry(macroNet, *outputDir, osmmacro.GeometryMode(*geometryMode))
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error exporting macro network: %v\n", err)
 			os.Exit(1)
 		}
@@ -146,6 +156,9 @@ func main() {
 			fmt.Printf("  Exported: %s, %s\n",
 				filepath.Join(*outputDir, "node.csv"),
 				filepath.Join(*outputDir, "link.csv"))
+			if *geometryMode == string(osmmacro.GEOMETRY_SHARED) {
+				fmt.Printf("  Exported: %s\n", filepath.Join(*outputDir, "geometry.csv"))
+			}
 		}
 	}
 

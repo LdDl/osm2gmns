@@ -65,6 +65,7 @@ osm2gmns -help
 |------|---------|-------------|
 | `-input` | (required) | Input OSM file path (.osm or .osm.pbf) |
 | `-output` | `./output` | Output directory for CSV files |
+| `-geometry` | `inline` | Macro geometry: `inline` in link.csv, or `shared` in geometry.csv with geometry_id and dir_flag references |
 | `-networks` | `macro,movement,meso,micro` | Network levels to generate |
 | `-agents` | `auto,bike,walk` | Allowed agent types |
 | `-verbose` | `true` | Enable verbose output |
@@ -72,6 +73,8 @@ osm2gmns -help
 | `-strict` | `false` | Enable strict mode |
 | `-poi` | `false` | Prepare POI data |
 | `-version` | - | Show version information |
+
+`-geometry shared` requires macro export; meso and micro geometry stays inline. This adds the [GMNS v0.97 geometry reference mechanism](https://github.com/zephyr-data-specs/GMNS/blob/v0.97/spec/geometry.schema.json) to the existing semicolon CSV dialect, without claiming full dataset conformance.
 
 ### Docker Usage
 
