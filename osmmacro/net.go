@@ -16,6 +16,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 
 	lastLinkID := gmns.LinkID(0)
 	lastNodeID := gmns.NodeID(0)
+	lastGeometryID := gmns.GeometryID(0)
 
 	observed := make(map[osm.NodeID]gmns.NodeID)
 	nodes := make(map[gmns.NodeID]*macro.Node)
@@ -72,15 +73,21 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 				nodesForSegment[i] = nodesSet[nodeID]
 			}
 			links[lastLinkID] = NewLinkFrom(lastLinkID, currentSourceNodeID, currentTargetNodeID, nodes[currentSourceNodeID].OSMNode(), nodes[currentTargetNodeID].OSMNode(), macro.DIRECTION_FORWARD, way, nodesForSegment)
+			// Reference the source segment's forward alignment; Geom() stays in travel order.
+			macro.WithGeometryID(lastGeometryID)(links[lastLinkID])
+			macro.WithDirFlag(gmns.DIR_FLAG_FORWARD)(links[lastLinkID])
 			macro.WithOutcomingLinks(lastLinkID)(nodes[currentSourceNodeID])
 			macro.WithIncomingLinks(lastLinkID)(nodes[currentTargetNodeID])
 			lastLinkID++
 			if !way.IsOneWay {
 				links[lastLinkID] = NewLinkFrom(lastLinkID, currentTargetNodeID, currentSourceNodeID, nodes[currentTargetNodeID].OSMNode(), nodes[currentSourceNodeID].OSMNode(), macro.DIRECTION_BACKWARD, way, nodesForSegment)
+				macro.WithGeometryID(lastGeometryID)(links[lastLinkID])
+				macro.WithDirFlag(gmns.DIR_FLAG_REVERSE)(links[lastLinkID])
 				macro.WithOutcomingLinks(lastLinkID)(nodes[currentTargetNodeID])
 				macro.WithIncomingLinks(lastLinkID)(nodes[currentSourceNodeID])
 				lastLinkID++
 			}
+			lastGeometryID++
 		}
 	}
 
