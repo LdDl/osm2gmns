@@ -85,7 +85,8 @@ func main() {
 	}
 
 	// Validate network level dependencies
-	if err := validateLevelDependencies(levels); err != nil {
+	err := validateLevelDependencies(levels)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -94,7 +95,8 @@ func main() {
 	agents := parseAgentTypes(*agentTypes)
 
 	// Create output directory
-	if err := os.MkdirAll(*outputDir, 0755); err != nil {
+	err = os.MkdirAll(*outputDir, 0755)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -173,12 +175,20 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error generating movements: %v\n", err)
 			os.Exit(1)
 		}
+		for _, mvmt := range movements {
+			err = macroNet.AddMovement(mvmt)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error storing movements: %v\n", err)
+				os.Exit(1)
+			}
+		}
 		if *verbose {
 			fmt.Printf("  Movements: %d\n", len(movements))
 		}
 
 		if levels["movement"] {
-			if err := osmmovement.ExportToCSV(movements, filepath.Join(*outputDir, "movement.csv")); err != nil {
+			err = osmmovement.ExportToCSV(movements, filepath.Join(*outputDir, "movement.csv"))
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error exporting movements: %v\n", err)
 				os.Exit(1)
 			}
@@ -205,7 +215,8 @@ func main() {
 		}
 
 		if levels["meso"] {
-			if err := osmmeso.ExportToCSV(mesoNet, *outputDir); err != nil {
+			err = osmmeso.ExportToCSV(mesoNet, *outputDir)
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error exporting meso network: %v\n", err)
 				os.Exit(1)
 			}
@@ -232,7 +243,8 @@ func main() {
 			fmt.Printf("  Micro links: %d\n", len(microNet.Links))
 		}
 
-		if err := osmmicro.ExportToCSV(microNet, *outputDir); err != nil {
+		err = osmmicro.ExportToCSV(microNet, *outputDir)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error exporting micro network: %v\n", err)
 			os.Exit(1)
 		}

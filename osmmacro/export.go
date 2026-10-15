@@ -10,6 +10,7 @@ import (
 
 	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/macro"
+	"github.com/LdDl/osm2gmns/csvvalue"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ func ExportToCSV(macroNet *macro.Net, outputDir string) error {
 
 // ExportToCSVWithGeometry selects macro geometry storage in the existing CSV
 // dialect. Shared mode replaces geom with geometry_id and dir_flag, and writes
-// geometry.csv. It does not claim full GMNS v0.97 dataset conformance.
+// geometry.csv. It does not claim full standard dataset conformance.
 func ExportToCSVWithGeometry(macroNet *macro.Net, outputDir string, geometryMode GeometryMode) error {
 	var geometries map[gmns.GeometryID]orb.LineString
 	var err error
@@ -74,18 +75,18 @@ func exportNodesToCSV(macroNet *macro.Net, fname string) error {
 		sortedNodeIDs = append(sortedNodeIDs, id)
 	}
 	sort.Slice(sortedNodeIDs, func(i, j int) bool {
-		return sortedNodeIDs[i] < sortedNodeIDs[j]
+		return sortedNodeIDs[i].Less(sortedNodeIDs[j])
 	})
 	for _, nodeID := range sortedNodeIDs {
 		node := macroNet.Nodes[nodeID]
 		err = writer.Write([]string{
-			fmt.Sprintf("%d", node.ID),
+			node.ID.String(),
 			fmt.Sprintf("%d", node.OSMNode()),
 			node.ControlType().String(),
 			node.BoundaryType().String(),
 			node.ActivityType().String(),
 			node.ActivityLinkType().String(),
-			fmt.Sprintf("%d", node.Zone()),
+			csvvalue.NodeID(node.Zone()),
 			fmt.Sprintf("%d", node.Intersection()),
 			fmt.Sprintf("%d", node.POI()),
 			node.OSMHighway(),
@@ -124,7 +125,7 @@ func exportLinksToCSV(macroNet *macro.Net, fname string, geometryMode GeometryMo
 		sortedLinkIDs = append(sortedLinkIDs, id)
 	}
 	sort.Slice(sortedLinkIDs, func(i, j int) bool {
-		return sortedLinkIDs[i] < sortedLinkIDs[j]
+		return sortedLinkIDs[i].Less(sortedLinkIDs[j])
 	})
 	for _, linkID := range sortedLinkIDs {
 		link := macroNet.Links[linkID]
@@ -133,9 +134,9 @@ func exportLinksToCSV(macroNet *macro.Net, fname string, geometryMode GeometryMo
 			allowedAgentTypes[i] = agentType.String()
 		}
 		record := []string{
-			fmt.Sprintf("%d", link.ID),
-			fmt.Sprintf("%d", link.SourceNode()),
-			fmt.Sprintf("%d", link.TargetNode()),
+			link.ID.String(),
+			link.SourceNode().String(),
+			link.TargetNode().String(),
 			fmt.Sprintf("%d", link.OSMWay()),
 			fmt.Sprintf("%d", link.SourceOSMNode()),
 			fmt.Sprintf("%d", link.TargetOSMNode()),
@@ -145,17 +146,17 @@ func exportLinksToCSV(macroNet *macro.Net, fname string, geometryMode GeometryMo
 			link.ControlType().String(),
 			strings.Join(allowedAgentTypes, ","),
 			fmt.Sprintf("%t", link.WasBidirectional()),
-			fmt.Sprintf("%d", link.LanesNum()),
+			csvvalue.Int(link.LanesNum()),
 			fmt.Sprintf("%f", link.MaxSpeed()),
-			fmt.Sprintf("%f", link.FreeSpeed()),
-			fmt.Sprintf("%d", link.Capacity()),
-			fmt.Sprintf("%f", link.LengthMeters()),
+			csvvalue.Float(link.FreeSpeed()),
+			csvvalue.Float(link.Capacity()),
+			csvvalue.Float(link.LengthMeters()),
 			link.Name(),
 		}
 		if geometryMode == GEOMETRY_SHARED {
 			geometryID, _ := link.GeometryID()
 			dirFlag, _ := link.DirFlag()
-			record = append(record, fmt.Sprintf("%d", geometryID), fmt.Sprintf("%d", dirFlag))
+			record = append(record, geometryID.String(), fmt.Sprintf("%d", dirFlag))
 		} else {
 			record = append(record, wkt.MarshalString(link.Geom()))
 		}

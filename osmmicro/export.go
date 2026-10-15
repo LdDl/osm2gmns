@@ -10,6 +10,7 @@ import (
 
 	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/micro"
+	"github.com/LdDl/osm2gmns/csvvalue"
 	"github.com/paulmach/orb/encoding/wkt"
 	"github.com/pkg/errors"
 )
@@ -31,15 +32,19 @@ func ExportToCSV(microNet *micro.Net, outputDir string) error {
 	return nil
 }
 
-func exportNodesToCSV(microNet *micro.Net, fname string) error {
+func exportNodesToCSV(microNet *micro.Net, fname string) (exportErr error) {
 	file, err := os.Create(fname)
 	if err != nil {
 		return errors.Wrap(err, "Can't create file")
 	}
-	defer file.Close()
+	defer func() {
+		closeErr := file.Close()
+		if exportErr == nil && closeErr != nil {
+			exportErr = errors.Wrap(closeErr, "Can't close CSV file")
+		}
+	}()
 
 	writer := csv.NewWriter(file)
-	defer writer.Flush()
 	writer.Comma = ';'
 
 	err = writer.Write([]string{
@@ -64,18 +69,18 @@ func exportNodesToCSV(microNet *micro.Net, fname string) error {
 		sortedNodeIDs = append(sortedNodeIDs, id)
 	}
 	sort.Slice(sortedNodeIDs, func(i, j int) bool {
-		return sortedNodeIDs[i] < sortedNodeIDs[j]
+		return sortedNodeIDs[i].Less(sortedNodeIDs[j])
 	})
 	for _, nodeID := range sortedNodeIDs {
 		node := microNet.Nodes[nodeID]
 		err = writer.Write([]string{
-			fmt.Sprintf("%d", node.ID),
-			fmt.Sprintf("%d", node.MesoLink()),
+			node.ID.String(),
+			node.MesoLink().String(),
 			fmt.Sprintf("%d", node.LaneID()),
 			fmt.Sprintf("%d", node.CellIndex()),
 			fmt.Sprintf("%t", node.IsUpstreamEnd()),
 			fmt.Sprintf("%t", node.IsDownstreamEnd()),
-			fmt.Sprintf("%d", node.ZoneID()),
+			csvvalue.NodeID(node.ZoneID()),
 			node.BoundaryType().String(),
 			fmt.Sprintf("%f", node.Geom()[0]),
 			fmt.Sprintf("%f", node.Geom()[1]),
@@ -84,18 +89,27 @@ func exportNodesToCSV(microNet *micro.Net, fname string) error {
 			return errors.Wrap(err, "Can't write node")
 		}
 	}
+	writer.Flush()
+	err = writer.Error()
+	if err != nil {
+		return errors.Wrap(err, "Can't flush CSV file")
+	}
 	return nil
 }
 
-func exportLinksToCSV(microNet *micro.Net, fname string) error {
+func exportLinksToCSV(microNet *micro.Net, fname string) (exportErr error) {
 	file, err := os.Create(fname)
 	if err != nil {
 		return errors.Wrap(err, "Can't create file")
 	}
-	defer file.Close()
+	defer func() {
+		closeErr := file.Close()
+		if exportErr == nil && closeErr != nil {
+			exportErr = errors.Wrap(closeErr, "Can't close CSV file")
+		}
+	}()
 
 	writer := csv.NewWriter(file)
-	defer writer.Flush()
 	writer.Comma = ';'
 
 	err = writer.Write([]string{
@@ -128,7 +142,7 @@ func exportLinksToCSV(microNet *micro.Net, fname string) error {
 		sortedLinkIDs = append(sortedLinkIDs, id)
 	}
 	sort.Slice(sortedLinkIDs, func(i, j int) bool {
-		return sortedLinkIDs[i] < sortedLinkIDs[j]
+		return sortedLinkIDs[i].Less(sortedLinkIDs[j])
 	})
 	for _, linkID := range sortedLinkIDs {
 		link := microNet.Links[linkID]
@@ -137,12 +151,12 @@ func exportLinksToCSV(microNet *micro.Net, fname string) error {
 			allowedAgentTypes[j] = agentType.String()
 		}
 		err = writer.Write([]string{
-			fmt.Sprintf("%d", link.ID),
-			fmt.Sprintf("%d", link.SourceNode()),
-			fmt.Sprintf("%d", link.TargetNode()),
-			fmt.Sprintf("%d", link.MesoLink()),
-			fmt.Sprintf("%d", link.MacroLink()),
-			fmt.Sprintf("%d", link.MacroNode()),
+			link.ID.String(),
+			link.SourceNode().String(),
+			link.TargetNode().String(),
+			link.MesoLink().String(),
+			link.MacroLink().String(),
+			link.MacroNode().String(),
 			link.CellType().String(),
 			fmt.Sprintf("%d", link.LaneID()),
 			fmt.Sprintf("%t", link.IsFirstMovementCell()),
@@ -151,14 +165,19 @@ func exportLinksToCSV(microNet *micro.Net, fname string) error {
 			link.MesoLinkType().String(),
 			link.ControlType().String(),
 			strings.Join(allowedAgentTypes, ","),
-			fmt.Sprintf("%f", link.FreeSpeed()),
-			fmt.Sprintf("%d", link.Capacity()),
-			fmt.Sprintf("%f", link.LengthMeters()),
+			csvvalue.Float(link.FreeSpeed()),
+			csvvalue.Float(link.Capacity()),
+			csvvalue.Float(link.LengthMeters()),
 			wkt.MarshalString(link.Geom()),
 		})
 		if err != nil {
 			return errors.Wrap(err, "Can't write link")
 		}
+	}
+	writer.Flush()
+	err = writer.Error()
+	if err != nil {
+		return errors.Wrap(err, "Can't flush CSV file")
 	}
 	return nil
 }

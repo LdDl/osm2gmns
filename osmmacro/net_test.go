@@ -34,23 +34,23 @@ func TestSegmentGeometryReferences(t *testing.T) {
 			name: "two-way road",
 			ways: []geometryTestWay{{id: 10, nodes: []osm.NodeID{1, 2, 3}}},
 			links: []geometryTestLink{
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 0, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 2, 1}, geometryID: 0, dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 2, 1}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_REVERSE},
 			},
 		},
 		{
 			name: "one-way road",
 			ways: []geometryTestWay{{id: 10, nodes: []osm.NodeID{1, 2, 3}, oneWay: true}},
 			links: []geometryTestLink{
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 0, dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_FORWARD},
 			},
 		},
 		{
 			name: "separate roundabout arcs within one way",
 			ways: []geometryTestWay{{id: 1491559491, nodes: []osm.NodeID{1, 2, 3, 4, 1}, oneWay: true}},
 			links: []geometryTestLink{
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 0, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 4, 1}, geometryID: 1, dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 4, 1}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_FORWARD},
 			},
 		},
 		{
@@ -60,22 +60,22 @@ func TestSegmentGeometryReferences(t *testing.T) {
 				{id: 11, nodes: []osm.NodeID{1, 4, 3}},
 			},
 			links: []geometryTestLink{
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 0, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 2, 1}, geometryID: 0, dirFlag: gmns.DIR_FLAG_REVERSE},
-				{nodes: []osm.NodeID{1, 4, 3}, geometryID: 1, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 4, 1}, geometryID: 1, dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 2, 1}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 4, 3}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 4, 1}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_REVERSE},
 			},
 		},
 		{
 			name: "repeated endpoints within one way",
 			ways: []geometryTestWay{{id: 10, nodes: []osm.NodeID{1, 2, 3, 4, 1, 5, 3}}},
 			links: []geometryTestLink{
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 0, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 2, 1}, geometryID: 0, dirFlag: gmns.DIR_FLAG_REVERSE},
-				{nodes: []osm.NodeID{3, 4, 1}, geometryID: 1, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{1, 4, 3}, geometryID: 1, dirFlag: gmns.DIR_FLAG_REVERSE},
-				{nodes: []osm.NodeID{1, 5, 3}, geometryID: 2, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 5, 1}, geometryID: 2, dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 2, 1}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{3, 4, 1}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{1, 4, 3}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 5, 3}, geometryID: gmns.GeometryIDFromInt64(2), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 5, 1}, geometryID: gmns.GeometryIDFromInt64(2), dirFlag: gmns.DIR_FLAG_REVERSE},
 			},
 		},
 		{
@@ -85,10 +85,10 @@ func TestSegmentGeometryReferences(t *testing.T) {
 				{id: 11, nodes: []osm.NodeID{1, 2, 3}},
 			},
 			links: []geometryTestLink{
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 0, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 2, 1}, geometryID: 0, dirFlag: gmns.DIR_FLAG_REVERSE},
-				{nodes: []osm.NodeID{1, 2, 3}, geometryID: 1, dirFlag: gmns.DIR_FLAG_FORWARD},
-				{nodes: []osm.NodeID{3, 2, 1}, geometryID: 1, dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 2, 1}, geometryID: gmns.GeometryIDFromInt64(0), dirFlag: gmns.DIR_FLAG_REVERSE},
+				{nodes: []osm.NodeID{1, 2, 3}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_FORWARD},
+				{nodes: []osm.NodeID{3, 2, 1}, geometryID: gmns.GeometryIDFromInt64(1), dirFlag: gmns.DIR_FLAG_REVERSE},
 			},
 		},
 	}
@@ -112,36 +112,37 @@ func TestSegmentGeometryReferences(t *testing.T) {
 				t.Fatal(err)
 			}
 			if len(network.Links) != len(testCase.links) {
-				t.Fatalf("got %d links, expected %d", len(network.Links), len(testCase.links))
+				t.Fatalf("got %v links, expected %v", len(network.Links), len(testCase.links))
 			}
 			canonicalShapes := make(map[gmns.GeometryID]orb.LineString)
 			for index, expected := range testCase.links {
-				link := network.Links[gmns.LinkID(index)]
+				link := network.Links[gmns.LinkIDFromInt64(int64(index))]
 				geometryID, hasGeometryID := link.GeometryID()
 				dirFlag, hasDirFlag := link.DirFlag()
 				if !hasGeometryID || geometryID != expected.geometryID {
-					t.Fatalf("link %d: geometry ID %d, present %t, expected %d", link.ID, geometryID, hasGeometryID, expected.geometryID)
+					t.Fatalf("link %v: geometry ID %v, present %t, expected %v", link.ID, geometryID, hasGeometryID, expected.geometryID)
 				}
 				if !hasDirFlag || dirFlag != expected.dirFlag {
-					t.Fatalf("link %d: direction %d, present %t, expected %d", link.ID, dirFlag, hasDirFlag, expected.dirFlag)
+					t.Fatalf("link %v: direction %v, present %t, expected %v", link.ID, dirFlag, hasDirFlag, expected.dirFlag)
 				}
 				expectedShape := make(orb.LineString, len(expected.nodes))
 				for pointIndex, nodeID := range expected.nodes {
 					expectedShape[pointIndex] = nodes[nodeID].InnerNode.Point()
 				}
 				if !link.Geom().Equal(expectedShape) {
-					t.Fatalf("link %d: travel geometry changed", link.ID)
+					t.Fatalf("link %v: travel geometry changed", link.ID)
 				}
 				if link.SourceOSMNode() != expected.nodes[0] || link.TargetOSMNode() != expected.nodes[len(expected.nodes)-1] {
-					t.Fatalf("link %d: topology changed", link.ID)
+					t.Fatalf("link %v: topology changed", link.ID)
 				}
 				if link.WasBidirectional() {
 					expectedLanes := 2
 					if dirFlag == gmns.DIR_FLAG_REVERSE {
 						expectedLanes = 1
 					}
-					if link.LanesNum() != expectedLanes {
-						t.Fatalf("link %d: direction-specific lanes changed", link.ID)
+					lanes, present := link.LanesNum()
+					if !present || lanes != expectedLanes {
+						t.Fatalf("link %v: direction-specific lanes changed", link.ID)
 					}
 				}
 				canonical := link.Geom().Clone()
@@ -150,7 +151,7 @@ func TestSegmentGeometryReferences(t *testing.T) {
 				}
 				previous, exists := canonicalShapes[geometryID]
 				if exists && !canonical.Equal(previous) {
-					t.Fatalf("geometry %d refers to different alignments", geometryID)
+					t.Fatalf("geometry %v refers to different alignments", geometryID)
 				}
 				canonicalShapes[geometryID] = canonical
 			}
