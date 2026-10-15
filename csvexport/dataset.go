@@ -76,7 +76,7 @@ func WriteDatasets(outputDir string, datasets []Dataset, configure ...Option) er
 					"delimiter": string(settings.delimiter),
 					"header":    true,
 				},
-				"schema":   schemaBaseURL + table.Name + ".schema.json",
+				"schema": schemaBaseURL + table.Name + ".schema.json",
 			})
 		}
 		// Remove optional tables left by a previous export of this same level.
