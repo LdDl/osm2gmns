@@ -3,19 +3,22 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/LdDl/go-gmns/generators"
+	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/gmns/types"
 	"github.com/LdDl/go-gmns/meso"
-	"github.com/LdDl/go-gmns/movement"
+	"github.com/LdDl/go-gmns/micro"
 	"github.com/LdDl/osm2gmns"
+	"github.com/LdDl/osm2gmns/csvexport"
 	"github.com/LdDl/osm2gmns/osmmacro"
 	"github.com/LdDl/osm2gmns/osmmeso"
 	"github.com/LdDl/osm2gmns/osmmicro"
-	"github.com/LdDl/osm2gmns/osmmovement"
+	"github.com/LdDl/osm2gmns/preparation"
 )
 
 var (
@@ -25,282 +28,207 @@ var (
 )
 
 func main() {
-	// Define flags
-	inputFile := flag.String("input", "", "Input OSM file path (.osm or .osm.pbf)")
-	outputDir := flag.String("output", "./output", "Output directory for CSV files")
-	geometryMode := flag.String("geometry", string(osmmacro.GEOMETRY_INLINE), "Macro geometry storage: inline or shared (geometry.csv)")
-	networkLevels := flag.String("networks", "macro,movement,meso,micro", "Comma-separated network levels to generate: macro,movement,meso,micro")
-	agentTypes := flag.String("agents", "auto,bike,walk", "Comma-separated allowed agent types: auto,bike,walk")
-	verbose := flag.Bool("verbose", true, "Enable verbose output")
-	suppressWarnings := flag.Bool("suppress-warnings", false, "Suppress warning messages")
-	strictMode := flag.Bool("strict", false, "Enable strict mode (fail on warnings)")
-	preparePOI := flag.Bool("poi", false, "Prepare POI data")
-	showVersion := flag.Bool("version", false, "Show version information")
-
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "osm2gmns - Convert OpenStreetMap data to GMNS format\n\n")
-		fmt.Fprintf(os.Stderr, "Usage: osm2gmns [options]\n\n")
-		fmt.Fprintf(os.Stderr, "Options:\n")
-		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  osm2gmns -input map.osm -output ./results\n")
-		fmt.Fprintf(os.Stderr, "  osm2gmns -input map.osm.pbf -networks macro,meso -agents auto\n")
-		fmt.Fprintf(os.Stderr, "  osm2gmns -input map.osm -output ./data -verbose=false\n")
+	err := run(os.Args[1:], os.Stdout, os.Stderr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
+}
 
-	flag.Parse()
-
+func run(arguments []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("osm2gmns", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	inputFile := flags.String("input", "", "Input OSM file (.osm or .osm.pbf)")
+	outputDir := flags.String("output", "./output", "Flat output directory for GMNS datasets")
+	geometryMode := flags.String("geometry", "inline", "Macro geometry: inline or shared; meso/micro remain inline")
+	networkLevels := flags.String("networks", "macro,movement,meso,micro", "Levels to export: macro,meso,micro; movement also selects its macro network")
+	agentTypes := flags.String("agents", "auto,bike,walk", "Allowed agents: auto,bike,walk")
+	verbose := flags.Bool("verbose", true, "Enable verbose output")
+	suppressWarnings := flags.Bool("suppress-warnings", false, "Suppress warning messages")
+	strictMode := flags.Bool("strict", false, "Fail on warnings")
+	preparePOI := flags.Bool("poi", false, "Prepare POI data")
+	showVersion := flags.Bool("version", false, "Show version information")
+	useOptions := preparation.DefaultUseOptions()
+	flags.Float64Var(&useOptions.AutoPersonsPerVehicle, "auto-persons", preparation.DefaultAutoPersonsPerVehicle, "Modeled persons per auto vehicle")
+	flags.Float64Var(&useOptions.AutoPCE, "auto-pce", preparation.DefaultAutoPCE, "Auto passenger-car equivalent")
+	flags.Float64Var(&useOptions.BikePersonsPerVehicle, "bike-persons", preparation.DefaultBikePersonsPerVehicle, "Modeled persons per bicycle")
+	flags.Float64Var(&useOptions.BikePCE, "bike-pce", preparation.DefaultBikePCE, "Bicycle passenger-car equivalent")
+	flags.Float64Var(&useOptions.WalkPersonsPerVehicle, "walk-persons", preparation.DefaultWalkPersonsPerVehicle, "Persons per walking unit")
+	flags.Float64Var(&useOptions.WalkPCE, "walk-pce", preparation.DefaultWalkPCE, "Pedestrian passenger-car equivalent")
+	flags.Usage = func() {
+		fmt.Fprintln(stderr, "osm2gmns - Convert OpenStreetMap data to GMNS datasets")
+		fmt.Fprintln(stderr, "Usage: osm2gmns -input map.osm -output ./results")
+		flags.PrintDefaults()
+	}
+	if len(arguments) == 0 {
+		flags.Usage()
+		return nil
+	}
+	err := flags.Parse(arguments)
+	if err == flag.ErrHelp {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("unexpected positional arguments: %v", flags.Args())
+	}
 	if *showVersion {
-		fmt.Printf("osm2gmns %s\n", version)
-		fmt.Printf("  Build time: %s\n", buildTime)
-		fmt.Printf("  Git commit: %s\n", gitCommit)
-		os.Exit(0)
+		fmt.Fprintf(stdout, "osm2gmns %s\nBuild time: %s\nGit commit: %s\n", version, buildTime, gitCommit)
+		return nil
 	}
-
 	if *inputFile == "" {
-		fmt.Fprintln(os.Stderr, "Error: input file is required")
-		flag.Usage()
-		os.Exit(1)
+		return fmt.Errorf("input file is required")
 	}
-
-	// Check input file exists
-	if _, err := os.Stat(*inputFile); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: input file does not exist: %s\n", *inputFile)
-		os.Exit(1)
-	}
-
-	// Parse network levels
-	levels := parseNetworkLevels(*networkLevels)
-	if len(levels) == 0 {
-		fmt.Fprintln(os.Stderr, "Error: at least one network level must be specified")
-		os.Exit(1)
-	}
-	if *geometryMode != string(osmmacro.GEOMETRY_INLINE) && *geometryMode != string(osmmacro.GEOMETRY_SHARED) {
-		fmt.Fprintf(os.Stderr, "Error: unsupported geometry mode %q; expected inline or shared\n", *geometryMode)
-		os.Exit(1)
-	}
-	if *geometryMode == string(osmmacro.GEOMETRY_SHARED) && !levels["macro"] {
-		fmt.Fprintln(os.Stderr, "Error: -geometry shared requires macro in -networks")
-		os.Exit(1)
-	}
-
-	// Validate network level dependencies
-	err := validateLevelDependencies(levels)
+	levels, err := parseNetworkLevels(*networkLevels)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-
-	// Parse agent types
-	agents := parseAgentTypes(*agentTypes)
-
-	// Create output directory
-	err = os.MkdirAll(*outputDir, 0755)
+	agents, err := parseAgentTypes(*agentTypes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-
-	// Set global logging options
+	mode := osmmacro.GeometryMode(*geometryMode)
+	if mode != osmmacro.GEOMETRY_INLINE && mode != osmmacro.GEOMETRY_SHARED {
+		return fmt.Errorf("unsupported geometry mode %q", mode)
+	}
+	if mode == osmmacro.GEOMETRY_SHARED && !levels["macro"] {
+		return fmt.Errorf("-geometry shared requires macro export")
+	}
+	_, err = useOptions.Definitions()
+	if err != nil {
+		return err
+	}
 	osm2gmns.VERBOSE = *verbose
 	osm2gmns.SUPPRESS_WARNINGS = *suppressWarnings
-
-	if *verbose {
-		fmt.Printf("osm2gmns %s\n", version)
-		fmt.Printf("Input file: %s\n", *inputFile)
-		fmt.Printf("Output directory: %s\n", *outputDir)
-		fmt.Printf("Network levels: %v\n", levels)
-		fmt.Printf("Agent types: %v\n", agents)
-		fmt.Println()
-	}
-
-	// Create parser
-	parser := osm2gmns.NewParser(
-		*inputFile,
+	generators.VERBOSE = *verbose
+	parser := osm2gmns.NewParser(*inputFile,
 		osm2gmns.WithPreparePOI(*preparePOI),
 		osm2gmns.WithStrictMode(*strictMode),
 		osm2gmns.WithVerbose(*verbose),
 		osm2gmns.WithAllowedAgentTypes(agents),
 	)
-
-	// Read OSM data
-	if *verbose {
-		fmt.Println("Reading OSM data...")
-	}
-	osmData, err := parser.ReadOSM()
+	source, err := parser.ReadOSM()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading OSM file: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-
-	// Generate macro network
-	if *verbose {
-		fmt.Println("Generating macroscopic network...")
-	}
-	macroNet, err := osm2gmns.GenerateMacroscopic(osmData, *preparePOI)
+	macroNet, err := osm2gmns.GenerateMacroscopic(source, *preparePOI)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating macro network: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-	if *verbose {
-		fmt.Printf("  Macro nodes: %d\n", len(macroNet.Nodes))
-		fmt.Printf("  Macro links: %d\n", len(macroNet.Links))
+	config := gmns.NewConfig(gmns.IDTypeInteger,
+		gmns.WithDatasetName(filepath.Base(*inputFile)),
+		gmns.WithVersionNumber(0.97),
+	)
+	err = macroNet.SetConfig(config)
+	if err != nil {
+		return err
 	}
-
-	// Export macro network
-	if levels["macro"] {
-		err = osmmacro.ExportToCSVWithGeometry(macroNet, *outputDir, osmmacro.GeometryMode(*geometryMode))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error exporting macro network: %v\n", err)
-			os.Exit(1)
-		}
-		if *verbose {
-			fmt.Printf("  Exported: %s, %s\n",
-				filepath.Join(*outputDir, "node.csv"),
-				filepath.Join(*outputDir, "link.csv"))
-			if *geometryMode == string(osmmacro.GEOMETRY_SHARED) {
-				fmt.Printf("  Exported: %s\n", filepath.Join(*outputDir, "geometry.csv"))
-			}
-		}
+	movements, err := generators.GenerateMovements(macroNet)
+	if err != nil {
+		return err
 	}
-
-	// Generate movements if needed
-	var movements movement.MovementsStorage
-	if levels["movement"] || levels["meso"] || levels["micro"] {
-		if *verbose {
-			fmt.Println("Generating movements...")
-		}
-		movements, err = generators.GenerateMovements(macroNet)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating movements: %v\n", err)
-			os.Exit(1)
-		}
-		for _, mvmt := range movements {
-			err = macroNet.AddMovement(mvmt)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error storing movements: %v\n", err)
-				os.Exit(1)
-			}
-		}
-		if *verbose {
-			fmt.Printf("  Movements: %d\n", len(movements))
-		}
-
-		if levels["movement"] {
-			err = osmmovement.ExportToCSV(movements, filepath.Join(*outputDir, "movement.csv"))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error exporting movements: %v\n", err)
-				os.Exit(1)
-			}
-			if *verbose {
-				fmt.Printf("  Exported: %s\n", filepath.Join(*outputDir, "movement.csv"))
-			}
-		}
-	}
-
-	// Generate meso network if needed
 	var mesoNet *meso.Net
 	if levels["meso"] || levels["micro"] {
-		if *verbose {
-			fmt.Println("Generating mesoscopic network...")
-		}
 		mesoNet, err = generators.GenerateMesoscopic(macroNet, movements)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating meso network: %v\n", err)
-			os.Exit(1)
-		}
-		if *verbose {
-			fmt.Printf("  Meso nodes: %d\n", len(mesoNet.Nodes))
-			fmt.Printf("  Meso links: %d\n", len(mesoNet.Links))
-		}
-
-		if levels["meso"] {
-			err = osmmeso.ExportToCSV(mesoNet, *outputDir)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error exporting meso network: %v\n", err)
-				os.Exit(1)
-			}
-			if *verbose {
-				fmt.Printf("  Exported: %s, %s\n",
-					filepath.Join(*outputDir, "mesonode.csv"),
-					filepath.Join(*outputDir, "mesolink.csv"))
-			}
+			return err
 		}
 	}
-
-	// Generate micro network if needed
+	var microNet *micro.Net
 	if levels["micro"] {
-		if *verbose {
-			fmt.Println("Generating microscopic network...")
-		}
-		microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
+		microNet, err = generators.GenerateMicroscopic(macroNet, mesoNet, movements)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating micro network: %v\n", err)
-			os.Exit(1)
-		}
-		if *verbose {
-			fmt.Printf("  Micro nodes: %d\n", len(microNet.Nodes))
-			fmt.Printf("  Micro links: %d\n", len(microNet.Links))
-		}
-
-		err = osmmicro.ExportToCSV(microNet, *outputDir)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error exporting micro network: %v\n", err)
-			os.Exit(1)
-		}
-		if *verbose {
-			fmt.Printf("  Exported: %s, %s\n",
-				filepath.Join(*outputDir, "micronode.csv"),
-				filepath.Join(*outputDir, "microlink.csv"))
+			return err
 		}
 	}
-
+	// Preparation follows generation because the generators consume built-in agent permissions.
+	originalCodes, err := preparation.StoreGeneratedMovements(macroNet, movements)
+	if err != nil {
+		return err
+	}
+	datasets := make([]csvexport.Dataset, 0, 3)
+	if levels["macro"] {
+		err = preparation.Macro(macroNet, useOptions)
+		if err != nil {
+			return err
+		}
+		dataset, buildErr := osmmacro.BuildDataset(macroNet, mode)
+		if buildErr != nil {
+			return buildErr
+		}
+		dataset.Provenance["generated_movement_codes"] = originalCodes
+		datasets = append(datasets, dataset)
+	}
+	if levels["meso"] {
+		err = preparation.Meso(mesoNet, useOptions)
+		if err != nil {
+			return err
+		}
+		dataset, buildErr := osmmeso.BuildDataset(mesoNet)
+		if buildErr != nil {
+			return buildErr
+		}
+		datasets = append(datasets, dataset)
+	}
+	if levels["micro"] {
+		err = preparation.Micro(microNet, useOptions)
+		if err != nil {
+			return err
+		}
+		dataset, buildErr := osmmicro.BuildDataset(microNet)
+		if buildErr != nil {
+			return buildErr
+		}
+		datasets = append(datasets, dataset)
+	}
+	err = csvexport.WriteDatasets(*outputDir, datasets)
+	if err != nil {
+		return err
+	}
 	if *verbose {
-		fmt.Println()
-		fmt.Println("Done!")
-	}
-}
-
-func parseNetworkLevels(s string) map[string]bool {
-	levels := make(map[string]bool)
-	for _, level := range strings.Split(s, ",") {
-		level = strings.TrimSpace(strings.ToLower(level))
-		switch level {
-		case "macro", "movement", "meso", "micro":
-			levels[level] = true
-		}
-	}
-	return levels
-}
-
-func validateLevelDependencies(levels map[string]bool) error {
-	// micro requires meso
-	if levels["micro"] && !levels["meso"] {
-		// Auto-enable meso for micro generation (but don't export)
-		// This is handled in the main logic
-	}
-	// meso requires movement
-	if levels["meso"] && !levels["movement"] {
-		// Auto-enable movement generation (but don't export)
+		fmt.Fprintf(stdout, "Exported %d GMNS datasets to %s\n", len(datasets), *outputDir)
 	}
 	return nil
 }
 
-func parseAgentTypes(s string) []types.AgentType {
-	var agents []types.AgentType
-	for _, agent := range strings.Split(s, ",") {
-		agent = strings.TrimSpace(strings.ToLower(agent))
-		switch agent {
-		case "auto":
-			agents = append(agents, types.AGENT_AUTO)
-		case "bike":
-			agents = append(agents, types.AGENT_BIKE)
-		case "walk":
-			agents = append(agents, types.AGENT_WALK)
+func parseNetworkLevels(value string) (map[string]bool, error) {
+	levels := make(map[string]bool)
+	for _, level := range strings.Split(value, ",") {
+		level = strings.TrimSpace(strings.ToLower(level))
+		switch level {
+		case "macro", "meso", "micro":
+			levels[level] = true
+		case "movement":
+			levels["macro"] = true
+		default:
+			return nil, fmt.Errorf("unknown network level %q", level)
 		}
 	}
-	if len(agents) == 0 {
-		return types.AGENT_TYPES_DEFAULT
+	return levels, nil
+}
+
+func parseAgentTypes(value string) ([]types.AgentType, error) {
+	agents := make([]types.AgentType, 0)
+	seen := make(map[types.AgentType]bool)
+	for _, name := range strings.Split(value, ",") {
+		name = strings.TrimSpace(strings.ToLower(name))
+		var agent types.AgentType
+		switch name {
+		case "auto":
+			agent = types.AGENT_AUTO
+		case "bike":
+			agent = types.AGENT_BIKE
+		case "walk":
+			agent = types.AGENT_WALK
+		default:
+			return nil, fmt.Errorf("unknown agent %q", name)
+		}
+		if !seen[agent] {
+			agents = append(agents, agent)
+			seen[agent] = true
+		}
 	}
-	return agents
+	return agents, nil
 }

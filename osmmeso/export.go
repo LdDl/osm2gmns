@@ -1,148 +1,212 @@
 package osmmeso
 
 import (
-	"encoding/csv"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
+	"strconv"
 
 	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/meso"
+	"github.com/LdDl/osm2gmns/csvexport"
 	"github.com/LdDl/osm2gmns/csvvalue"
-	"github.com/paulmach/orb/encoding/wkt"
-	"github.com/pkg/errors"
 )
 
-func ExportToCSV(mesoNet *meso.Net, outputDir string) error {
-	fnameNodes := filepath.Join(outputDir, "mesonode.csv")
-	fnameLinks := filepath.Join(outputDir, "mesolink.csv")
-
-	err := exportNodesToCSV(mesoNet, fnameNodes)
+func ExportToCSV(net *meso.Net, outputDir string) error {
+	dataset, err := BuildDataset(net)
 	if err != nil {
-		return errors.Wrap(err, "Can't export nodes")
+		return err
 	}
-
-	err = exportLinksToCSV(mesoNet, fnameLinks)
-	if err != nil {
-		return errors.Wrap(err, "Can't export links")
-	}
-
-	return nil
+	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset})
 }
 
-func exportNodesToCSV(mesoNet *meso.Net, fname string) (exportErr error) {
-	file, err := os.Create(fname)
+// BuildDataset validates and serializes prepared records without modifying the network.
+func BuildDataset(net *meso.Net) (csvexport.Dataset, error) {
+	dataset := csvexport.Dataset{Level: "meso"}
+	err := net.ValidateDataset()
 	if err != nil {
-		return errors.Wrap(err, "Can't create file")
-	}
-	defer func() {
-		closeErr := file.Close()
-		if exportErr == nil && closeErr != nil {
-			exportErr = errors.Wrap(closeErr, "Can't close CSV file")
-		}
-	}()
-
-	writer := csv.NewWriter(file)
-	writer.Comma = ';'
-
-	err = writer.Write([]string{"id", "zone_id", "macro_node_id", "macro_link_id", "activity_link_type", "boundary_type", "longitude", "latitude"})
-	if err != nil {
-		return errors.Wrap(err, "Can't write header")
+		return dataset, err
 	}
 
-	// Sort node IDs for deterministic output
-	sortedNodeIDs := make([]gmns.NodeID, 0, len(mesoNet.Nodes))
-	for id := range mesoNet.Nodes {
-		sortedNodeIDs = append(sortedNodeIDs, id)
+	shared := false
+
+	nodes := csvexport.Table{
+		Name: "node",
+		Header: []string{
+			"node_id",
+			"name",
+			"x_coord",
+			"y_coord",
+			"z_coord",
+			"node_type",
+			"ctrl_type",
+			"zone_id",
+			"parent_node_id",
+		},
 	}
-	sort.Slice(sortedNodeIDs, func(i, j int) bool {
-		return sortedNodeIDs[i].Less(sortedNodeIDs[j])
+	links := csvexport.Table{
+		Name: "link",
+		Header: []string{
+			"link_id",
+			"name",
+			"from_node_id",
+			"to_node_id",
+			"directed",
+			"geometry_id",
+			"geometry",
+			"parent_link_id",
+			"dir_flag",
+			"length",
+			"grade",
+			"facility_type",
+			"capacity",
+			"free_speed",
+			"lanes",
+			"bike_facility",
+			"ped_facility",
+			"parking",
+			"allowed_uses",
+			"toll",
+			"jurisdiction",
+			"row_width",
+		},
+	}
+	nodeIDs := make([]gmns.NodeID, 0, len(net.Nodes))
+	for id := range net.Nodes {
+		nodeIDs = append(nodeIDs, id)
+	}
+	sort.Slice(nodeIDs, func(first, second int) bool {
+		return nodeIDs[first].Less(nodeIDs[second])
 	})
-	for _, nodeID := range sortedNodeIDs {
-		node := mesoNet.Nodes[nodeID]
-		err = writer.Write([]string{
+	nodeMetadata := make([]map[string]any, 0, len(nodeIDs))
+	for _, id := range nodeIDs {
+		node := net.Nodes[id]
+		nodes.Rows = append(nodes.Rows, []string{
 			node.ID.String(),
+			node.Name(),
+			csvexport.Number(node.Geom()[0]),
+			csvexport.Number(node.Geom()[1]),
+			csvvalue.Float(node.AltitudeMeters()),
+			node.NodeType(),
+			node.ControlType().String(),
 			csvvalue.NodeID(node.MacroZone()),
-			node.MacroNode().String(),
-			node.MacroLink().String(),
-			node.ActivityLinkType().String(),
-			node.BoundaryType().String(),
-			fmt.Sprintf("%f", node.Geom()[0]),
-			fmt.Sprintf("%f", node.Geom()[1]),
+			csvvalue.NodeID(node.ParentNode()),
 		})
-		if err != nil {
-			return errors.Wrap(err, "Can't write node")
-		}
+		nodeMetadata = append(nodeMetadata, map[string]any{
+			"node_id":            node.ID,
+			"boundary_type":      node.BoundaryType().String(),
+			"macro_node_id":      node.MacroNode(),
+			"macro_link_id":      node.MacroLink(),
+			"activity_link_type": node.ActivityLinkType().String(),
+		})
 	}
-	writer.Flush()
-	err = writer.Error()
-	if err != nil {
-		return errors.Wrap(err, "Can't flush CSV file")
+	linkIDs := make([]gmns.LinkID, 0, len(net.Links))
+	for id := range net.Links {
+		linkIDs = append(linkIDs, id)
 	}
-	return nil
-}
-
-func exportLinksToCSV(mesoNet *meso.Net, fname string) (exportErr error) {
-	file, err := os.Create(fname)
-	if err != nil {
-		return errors.Wrap(err, "Can't create file")
-	}
-	defer func() {
-		closeErr := file.Close()
-		if exportErr == nil && closeErr != nil {
-			exportErr = errors.Wrap(closeErr, "Can't close CSV file")
-		}
-	}()
-
-	writer := csv.NewWriter(file)
-	writer.Comma = ';'
-
-	err = writer.Write([]string{"id", "source_node", "target_node", "macro_node_id", "macro_link_id", "link_type", "control_type", "movement_id", "movement_composite_type", "allowed_agent_types", "lanes", "free_speed", "capacity", "length_meters", "geom"})
-	if err != nil {
-		return errors.Wrap(err, "Can't write header")
-	}
-
-	// Sort link IDs for deterministic output
-	sortedLinkIDs := make([]gmns.LinkID, 0, len(mesoNet.Links))
-	for id := range mesoNet.Links {
-		sortedLinkIDs = append(sortedLinkIDs, id)
-	}
-	sort.Slice(sortedLinkIDs, func(i, j int) bool {
-		return sortedLinkIDs[i].Less(sortedLinkIDs[j])
+	sort.Slice(linkIDs, func(first, second int) bool {
+		return linkIDs[first].Less(linkIDs[second])
 	})
-	for _, linkID := range sortedLinkIDs {
-		link := mesoNet.Links[linkID]
-		allowedAgentTypes := make([]string, len(link.AllowedAgentTypes()))
-		for i, agentType := range link.AllowedAgentTypes() {
-			allowedAgentTypes[i] = agentType.String()
+	linkMetadata := make([]map[string]any, 0, len(linkIDs))
+	for _, id := range linkIDs {
+		link := net.Links[id]
+		if len(link.AllowedAgentTypes()) > 0 && link.AllowedUses() == "" {
+			return dataset, fmt.Errorf("link %v: prepare allowed_uses before export", id)
 		}
-		err = writer.Write([]string{
+		geometryID, hasGeometry := link.GeometryID()
+		direction, hasDirection := link.DirFlag()
+		geometryCell, shapeCell, directionCell, geometryErr := csvexport.GeometryCells(geometryID, hasGeometry, direction, hasDirection, link.Geom(), link.Directed(), shared)
+		if geometryErr != nil {
+			return dataset, fmt.Errorf("link %v: %w", id, geometryErr)
+		}
+		links.Rows = append(links.Rows, []string{
 			link.ID.String(),
+			link.Name(),
 			link.SourceNode().String(),
 			link.TargetNode().String(),
-			link.MacroNode().String(),
-			link.MacroLink().String(),
-			link.LinkType().String(),
-			link.ControlType().String(),
-			link.Movement().String(),
-			link.MvmtTextID().String(),
-			strings.Join(allowedAgentTypes, ","),
-			csvvalue.Int(link.LanesNum()),
-			csvvalue.Float(link.FreeSpeed()),
-			csvvalue.Float(link.Capacity()),
+			strconv.FormatBool(link.Directed()),
+			geometryCell,
+			shapeCell,
+			csvexport.LinkID(link.ParentLink()),
+			directionCell,
 			csvvalue.Float(link.LengthMeters()),
-			wkt.MarshalString(link.Geom()),
+			csvvalue.Float(link.Grade()),
+			link.FacilityType(),
+			csvvalue.Float(link.Capacity()),
+			csvvalue.Float(link.FreeSpeed()),
+			csvvalue.Int(link.LanesNum()),
+			link.BikeFacility(),
+			link.PedFacility(),
+			link.Parking(),
+			link.AllowedUses(),
+			csvvalue.Float(link.Toll()),
+			link.Jurisdiction(),
+			csvvalue.Float(link.RightOfWayWidthMeters()),
 		})
-		if err != nil {
-			return errors.Wrap(err, "Can't write link")
+		agents := make([]string, 0, len(link.AllowedAgentTypes()))
+		for _, agent := range link.AllowedAgentTypes() {
+			agents = append(agents, agent.String())
 		}
+		linkMetadata = append(linkMetadata, map[string]any{
+			"geometry_id":         geometryID,
+			"source_dir_flag":     direction,
+			"link_id":             link.ID,
+			"control_type":        link.ControlType().String(),
+			"allowed_agent_types": agents,
+			"macro_node_id":       link.MacroNode(),
+			"macro_link_id":       link.MacroLink(),
+			"movement_id":         link.Movement(),
+			"movement_code":       link.MvmtTextID().String(),
+			"segment_index":       link.SegmentIdx(),
+			"is_connection":       link.IsConnection(),
+			"lanes_change":        link.LanesChange(),
+			"incoming_link_id":    link.MovementMesoLinkIncome(),
+			"outgoing_link_id":    link.MovementMesoLinkOutcome(),
+			"incoming_lane_index": link.MovementIncomeLaneStartSeqID(),
+			"outgoing_lane_index": link.MovementOutcomeLaneStartSeqID(),
+			"link_type":           link.LinkType().String(),
+		})
 	}
-	writer.Flush()
-	err = writer.Error()
+	records := net.MovementRecords()
+	movements, err := csvexport.Movements(records)
 	if err != nil {
-		return errors.Wrap(err, "Can't flush CSV file")
+		return dataset, err
 	}
-	return nil
+	movementMetadata := make([]map[string]any, 0, len(records))
+	for _, record := range records {
+		if len(record.AllowedAgentTypes()) > 0 && record.AllowedUses() == "" {
+			return dataset, fmt.Errorf("movement %v: prepare allowed_uses before export", record.ID)
+		}
+		movementMetadata = append(movementMetadata, map[string]any{
+			"movement_id":               record.ID,
+			"osm_node_id":               record.OSMNode(),
+			"from_osm_node_id":          record.OSMNodeSource(),
+			"to_osm_node_id":            record.OSMNodeTarget(),
+			"lanes_num":                 record.LanesNum(),
+			"incoming_lane_start_index": record.StartIncomeLaneSeqID(),
+			"incoming_lane_end_index":   record.EndIncomeLaneSeqID(),
+			"outgoing_lane_start_index": record.StartOutcomeLaneSeqID(),
+			"outgoing_lane_end_index":   record.EndOutcomeLaneSeqID(),
+		})
+	}
+	dataset.Tables = []csvexport.Table{
+		csvexport.Config(net.Config()),
+		nodes,
+		links,
+		csvexport.Geometries(net.GeometryRecords()),
+		movements,
+		csvexport.Zones(net.ZoneRecords()),
+		csvexport.UseDefinitions(net.UseDefinitionRecords()),
+		csvexport.UseGroups(net.UseGroupRecords()),
+		csvexport.Lanes(net.LaneRecords()),
+		csvexport.Segments(net.SegmentRecords()),
+		csvexport.SegmentLanes(net.SegmentLaneRecords()),
+	}
+	dataset.Provenance = map[string]any{
+		"format":    "osm2gmns-provenance",
+		"level":     "meso",
+		"nodes":     nodeMetadata,
+		"links":     linkMetadata,
+		"movements": movementMetadata,
+	}
+	return dataset, nil
 }

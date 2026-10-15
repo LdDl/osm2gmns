@@ -3,11 +3,20 @@
 Go port of [OSM2GMNS](https://github.com/jiawlu/OSM2GMNS) - convert OpenStreetMap data to GMNS format.
 
 This tool prepares a routable graph from OSM road network with three levels of detail:
+
 1. **Macroscopic** + movements layer
-2. **Mesoscopic** (lane-level)
+2. **Mesoscopic** (road segments and junction connectors)
 3. **Microscopic** (cell-based)
 
 See [go-gmns](https://github.com/LdDl/go-gmns) for data format documentation.
+
+## Contents
+
+- [Installation](#installation)
+- [CLI usage](#cli-usage)
+- [Output](#output)
+- [Data preparation](#data-preparation)
+- [Library usage](#library-usage)
 
 ## Installation
 
@@ -65,8 +74,8 @@ osm2gmns -help
 |------|---------|-------------|
 | `-input` | (required) | Input OSM file path (.osm or .osm.pbf) |
 | `-output` | `./output` | Output directory for CSV files |
-| `-geometry` | `inline` | Macro geometry: `inline` in link.csv, or `shared` in geometry.csv with geometry_id and dir_flag references |
-| `-networks` | `macro,movement,meso,micro` | Network levels to generate |
+| `-geometry` | `inline` | Macro geometry: `inline` in `link_macro.csv`, or `shared` references to `geometry_macro.csv` |
+| `-networks` | `macro,movement,meso,micro` | Levels to export; `movement` selects its owning macro dataset |
 | `-agents` | `auto,bike,walk` | Allowed agent types |
 | `-verbose` | `true` | Enable verbose output |
 | `-suppress-warnings` | `false` | Suppress warning messages |
@@ -74,21 +83,44 @@ osm2gmns -help
 | `-poi` | `false` | Prepare POI data |
 | `-version` | - | Show version information |
 
-`-geometry shared` requires macro export; meso and micro geometry stays inline. This adds the [GMNS v0.97 geometry reference mechanism](https://github.com/zephyr-data-specs/GMNS/blob/v0.97/spec/geometry.schema.json) to the existing semicolon CSV dialect, without claiming full dataset conformance.
+`-geometry shared` requires macro export; meso and micro geometry stays inline. Macro includes its movements. Selecting only micro generates prerequisites internally and exports only micro. Write boolean flags as `-verbose=false`.
+
+Modeling defaults for `use_definition` are named constants in `preparation` and can be overridden with these flags:
+
+| Use | Occupancy flag (default) | PCE flag (default) |
+|---|---|---|
+| auto | `-auto-persons` (1) | `-auto-pce` (1) |
+| bike | `-bike-persons` (1) | `-bike-pce` (0.5) |
+| walk | `-walk-persons` (1) | `-walk-pce` (0) |
 
 ### Docker Usage
 
 ```shell
 # Process local OSM file
-docker run -v $(pwd):/data dimahkiin/osm2gmns -input /data/map.osm -output /data/results
+docker run --rm -v "$(pwd):/data" dimahkiin/osm2gmns -input /data/map.osm -output /data/results
 
 # With specific options
-docker run -v $(pwd):/data dimahkiin/osm2gmns \
+docker run --rm -v "$(pwd):/data" dimahkiin/osm2gmns \
     -input /data/map.osm.pbf \
     -output /data/results \
     -networks macro,meso \
     -agents auto
 ```
+
+## Output
+
+All files share one directory. Each selected level has an independent [GMNS](https://github.com/zephyr-data-specs/GMNS) dataset:
+
+| Files | Contents |
+|---|---|
+| `node_<level>.csv`, `link_<level>.csv` | Network nodes and links |
+| `config_<level>.csv` | Units, coordinate system and ID type |
+| `movement_<level>.csv` | Movements owned by this network, when present |
+| `<table>_<level>.csv` | Prepared geometries, zones, use definitions and other supported records |
+| `datapackage_<level>.json` | Maps standard resource names to the suffixed files and schema references |
+| `provenance_<level>.json` | OSM origins and generator metadata outside the standard tables |
+
+`<level>` is `macro`, `meso` or `micro`. CSV uses commas, optional missing values are blank, and shapes use WKT. The working units are metric: meters, km/h and seconds, with WGS84 coordinates. See [export details](docs/export.md) for the supported scope.
 
 ## Data Preparation
 
@@ -111,81 +143,10 @@ osmconvert map.osm --drop-author --drop-version --out-pbf -o=map.osm.pbf
 
 ## Library Usage
 
-* How to use as a package
-  - Get latest version of the package
-    ```shell
-    go get github.com/LdDl/osm2gmns@latest 
-    ```
-  - Prepare *.osm (XML) or *.pbf (Protobuf) file with OSM data 
-  - Code:
-    ```go
-    package main
+```shell
+go get github.com/LdDl/osm2gmns@latest
+```
 
-    import (
-	    "fmt"
+See the [complete example](cmd/examples/read_osm/README.md) for generation, dataset preparation and export.
 
-	    "github.com/LdDl/go-gmns/generators"
-	    "github.com/LdDl/go-gmns/gmns/types"
-	    "github.com/LdDl/osm2gmns"
-    )
-
-    func main() {
-	    // Explicitly set global variables for logging (those are defaults actually)
-	    osm2gmns.VERBOSE = true
-	    osm2gmns.SUPPRESS_WARNINGS = false
-
-	    parser := osm2gmns.NewParser(
-		    "./sample.osm",
-		    osm2gmns.WithPreparePOI(false),
-		    osm2gmns.WithStrictMode(false),
-		    osm2gmns.WithVerbose(true),
-		    osm2gmns.WithAllowedAgentTypes(types.AGENT_TYPES_DEFAULT),
-	    )
-	    fmt.Println(parser)
-
-	    osmData, err := parser.ReadOSM()
-	    if err != nil {
-		    fmt.Println(err)
-		    return
-	    }
-	    macroNet, err := osm2gmns.GenerateMacroscopic(osmData, false)
-	    if err != nil {
-		    fmt.Println(err)
-		    return
-	    }
-	    fmt.Println("macro nodes num", len(macroNet.Nodes))
-	    fmt.Println("macro links num", len(macroNet.Links))
-
-	    movements, err := generators.GenerateMovements(macroNet)
-	    if err != nil {
-		    fmt.Println(err)
-		    return
-	    }
-	    fmt.Println("movements_num", len(movements))
-
-	    mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
-	    if err != nil {
-		    fmt.Println(err)
-		    return
-	    }
-	    fmt.Println("meso nodes num", len(mesoNet.Nodes))
-	    fmt.Println("meso links num", len(mesoNet.Links))
-
-	    microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
-	    if err != nil {
-		    fmt.Println(err)
-		    return
-	    }
-	    fmt.Println("micro nodes num", len(microNet.Nodes))
-	    fmt.Println("micro links num", len(microNet.Links))
-    }
-    ```
-
-* Test:
-  ```shell
-  # Load some OSM file to root of folder
-  # Call this file sample.osm
-  # Run:
-  go test -timeout 30s -run '^TestParser$' ./*.go
-  # After you will see some files in test_data folder
-  ```
+See [export details](docs/export.md) for the supported records, ownership and modeling assumptions.

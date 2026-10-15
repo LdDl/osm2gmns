@@ -42,6 +42,7 @@ func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceO
 		macro.WithTargetOSMNodeID(targetOSMNodeID),
 		macro.WithLinkClass(way.LinkClass),
 		macro.WithLinkType(way.LinkType),
+		macro.WithFacilityType(way.LinkType.String()),
 		macro.WithLinkConnectionType(way.LinkConnectionType),
 		macro.WithLinkControlType(types.CONTROL_TYPE_NOT_SIGNAL),
 		macro.WithAllowedAgentTypes(way.AllowedAgentTypes),

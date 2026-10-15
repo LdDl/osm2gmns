@@ -1,7 +1,6 @@
 package osm2gmns
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/LdDl/osm2gmns/osmmacro"
 	"github.com/LdDl/osm2gmns/osmmeso"
 	"github.com/LdDl/osm2gmns/osmmicro"
-	"github.com/LdDl/osm2gmns/osmmovement"
+	"github.com/LdDl/osm2gmns/preparation"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -55,16 +54,6 @@ func TestParser(t *testing.T) {
 		assert.NoError(t, macroNet.AddMovement(mvmt))
 	}
 	assert.NoError(t, macroNet.ValidateDataset())
-	err = osmmacro.ExportToCSV(macroNet, outputDir)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = osmmovement.ExportToCSV(movements, filepath.Join(outputDir, "movement.csv"))
-	if err != nil {
-		t.Error(err)
-		return
-	}
 
 	generators.VERBOSE = VERBOSE
 	mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
@@ -77,11 +66,6 @@ func TestParser(t *testing.T) {
 	}
 
 	assert.NoError(t, mesoNet.ValidateDataset())
-	err = osmmeso.ExportToCSV(mesoNet, outputDir)
-	if err != nil {
-		t.Error(err)
-		return
-	}
 
 	st = time.Now()
 	microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
@@ -94,9 +78,11 @@ func TestParser(t *testing.T) {
 	}
 
 	assert.NoError(t, microNet.ValidateDataset())
-	err = osmmicro.ExportToCSV(microNet, outputDir)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	options := preparation.DefaultUseOptions()
+	assert.NoError(t, preparation.Macro(macroNet, options))
+	assert.NoError(t, preparation.Meso(mesoNet, options))
+	assert.NoError(t, preparation.Micro(microNet, options))
+	assert.NoError(t, osmmacro.ExportToCSV(macroNet, outputDir))
+	assert.NoError(t, osmmeso.ExportToCSV(mesoNet, outputDir))
+	assert.NoError(t, osmmicro.ExportToCSV(microNet, outputDir))
 }

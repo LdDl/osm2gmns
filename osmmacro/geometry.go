@@ -3,12 +3,10 @@ package osmmacro
 import (
 	"fmt"
 	"math"
-	"sort"
 
 	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/macro"
 	"github.com/paulmach/orb"
-	"github.com/paulmach/orb/encoding/wkt"
 )
 
 type GeometryMode string
@@ -83,30 +81,4 @@ func collectGeometries(macroNet *macro.Net) (map[gmns.GeometryID]orb.LineString,
 		}
 	}
 	return geometries, nil
-}
-
-func exportGeometriesToCSV(geometries map[gmns.GeometryID]orb.LineString, filename string) error {
-	geometryIDs := make([]gmns.GeometryID, 0, len(geometries))
-	for geometryID := range geometries {
-		geometryIDs = append(geometryIDs, geometryID)
-	}
-	sort.Slice(geometryIDs, func(first, second int) bool {
-		return geometryIDs[first].Less(geometryIDs[second])
-	})
-	file, writer, err := newCSVFile(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	err = writer.Write([]string{"geometry_id", "geometry"})
-	if err != nil {
-		return err
-	}
-	for _, geometryID := range geometryIDs {
-		err = writer.Write([]string{geometryID.String(), wkt.MarshalString(geometries[geometryID])})
-		if err != nil {
-			return err
-		}
-	}
-	return finishCSVFile(file, writer)
 }
