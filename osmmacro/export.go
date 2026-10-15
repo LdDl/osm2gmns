@@ -11,20 +11,20 @@ import (
 	"github.com/LdDl/osm2gmns/csvvalue"
 )
 
-func ExportToCSV(net *macro.Net, outputDir string) error {
+func ExportToCSV(net *macro.Net, outputDir string, options ...csvexport.Option) error {
 	dataset, err := BuildDataset(net, GEOMETRY_INLINE)
 	if err != nil {
 		return err
 	}
-	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset})
+	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset}, options...)
 }
 
-func ExportToCSVWithGeometry(net *macro.Net, outputDir string, mode GeometryMode) error {
+func ExportToCSVWithGeometry(net *macro.Net, outputDir string, mode GeometryMode, options ...csvexport.Option) error {
 	dataset, err := BuildDataset(net, mode)
 	if err != nil {
 		return err
 	}
-	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset})
+	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset}, options...)
 }
 
 // BuildDataset validates and serializes prepared records without modifying the network.

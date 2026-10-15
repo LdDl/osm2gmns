@@ -40,6 +40,7 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	inputFile := flags.String("input", "", "Input OSM file (.osm or .osm.pbf)")
 	outputDir := flags.String("output", "./output", "Flat output directory for GMNS datasets")
+	delimiterFlag := flags.String("delimiter", string(csvexport.DefaultDelimiter), "CSV separator: one character")
 	geometryMode := flags.String("geometry", "inline", "Macro geometry: inline or shared; meso/micro remain inline")
 	networkLevels := flags.String("networks", "macro,movement,meso,micro", "Levels to export: macro,meso,micro; movement also selects its macro network")
 	agentTypes := flags.String("agents", "auto,bike,walk", "Allowed agents: auto,bike,walk")
@@ -80,6 +81,10 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 	}
 	if *inputFile == "" {
 		return fmt.Errorf("input file is required")
+	}
+	delimiter, err := csvexport.ParseDelimiter(*delimiterFlag)
+	if err != nil {
+		return err
 	}
 	levels, err := parseNetworkLevels(*networkLevels)
 	if err != nil {
@@ -183,7 +188,7 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 		}
 		datasets = append(datasets, dataset)
 	}
-	err = csvexport.WriteDatasets(*outputDir, datasets)
+	err = csvexport.WriteDatasets(*outputDir, datasets, csvexport.WithDelimiter(delimiter))
 	if err != nil {
 		return err
 	}

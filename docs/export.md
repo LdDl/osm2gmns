@@ -43,6 +43,8 @@ Geometry IDs and canonical shapes must already exist before shared export. Seria
 
 ## Export API and writes
 
+CSV uses `;` by default. Set `-delimiter ","` in the CLI or pass `csvexport.WithDelimiter(',')` to `ExportToCSV`, `ExportToCSVWithGeometry`, `WriteDatasets` or `WriteTable`. The separator must be one valid UTF-8 character; double quotes, CR, LF, NUL and the Unicode replacement character are rejected. Every datapackage resource declares the chosen separator. Comma-separated lists inside `allowed_uses` and `use_group.uses` keep their standard meaning regardless of the CSV separator.
+
 `osmmacro`, `osmmeso` and `osmmicro` provide `BuildDataset` and `ExportToCSV`. `BuildDataset` validates the prepared network and builds a serialization snapshot without changing it. Use `csvexport.WriteDatasets` to write several snapshots together. `osmmovement.ExportToCSV` writes a standalone movement table; a full network export also validates configuration and local references.
 
 The writer stages every selected dataset before replacing managed files, removes stale optional tables for those levels, and leaves unrelated files and unselected levels untouched. Ordinary replacement errors trigger rollback; if rollback fails, the error identifies retained backups. The multi-file operation is not atomic against process termination, power loss or concurrent access. Avoid concurrent writers to one output directory.

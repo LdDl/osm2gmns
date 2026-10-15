@@ -79,7 +79,7 @@ func TestReplacementRemovesOnlyManagedStaleTables(t *testing.T) {
 	assert.FileExists(t, unrelated)
 	nodes, err := os.ReadFile(filepath.Join(directory, "node_macro.csv"))
 	assert.NoError(t, err)
-	assert.Equal(t, "node_id,x_coord,y_coord\n0,0,0\n", string(nodes))
+	assert.Equal(t, "node_id;x_coord;y_coord\n0;0;0\n", string(nodes))
 }
 
 func TestNonRegularDestinationIsNotReplaced(t *testing.T) {

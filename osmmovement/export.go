@@ -9,7 +9,7 @@ import (
 
 // ExportToCSV writes a standalone standard movement table.
 // Export a network dataset when configuration and local reference validation are needed.
-func ExportToCSV(storage movement.MovementsStorage, filename string) error {
+func ExportToCSV(storage movement.MovementsStorage, filename string, options ...csvexport.Option) error {
 	records := make([]*movement.Movement, 0, len(storage))
 	for id, record := range storage {
 		if record == nil || record.ID != id {
@@ -21,5 +21,5 @@ func ExportToCSV(storage movement.MovementsStorage, filename string) error {
 	if err != nil {
 		return err
 	}
-	return csvexport.WriteTable(filename, table)
+	return csvexport.WriteTable(filename, table, options...)
 }

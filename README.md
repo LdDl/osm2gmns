@@ -74,6 +74,7 @@ osm2gmns -help
 |------|---------|-------------|
 | `-input` | (required) | Input OSM file path (.osm or .osm.pbf) |
 | `-output` | `./output` | Output directory for CSV files |
+| `-delimiter` | `;` | CSV separator: one character, for example `-delimiter ","` |
 | `-geometry` | `inline` | Macro geometry: `inline` in `link_macro.csv`, or `shared` references to `geometry_macro.csv` |
 | `-networks` | `macro,movement,meso,micro` | Levels to export; `movement` selects its owning macro dataset |
 | `-agents` | `auto,bike,walk` | Allowed agent types |
@@ -120,7 +121,7 @@ All files share one directory. Each selected level has an independent [GMNS](htt
 | `datapackage_<level>.json` | Maps standard resource names to the suffixed files and schema references |
 | `provenance_<level>.json` | OSM origins and generator metadata outside the standard tables |
 
-`<level>` is `macro`, `meso` or `micro`. CSV uses commas, optional missing values are blank, and shapes use WKT. The working units are metric: meters, km/h and seconds, with WGS84 coordinates. See [export details](docs/export.md) for the supported scope.
+`<level>` is `macro`, `meso` or `micro`. CSV uses `;` by default; `-delimiter ","` selects commas. Optional missing values are blank, and shapes use WKT. The working units are metric: meters, km/h and seconds, with WGS84 coordinates. See [export details](docs/export.md) for the supported scope.
 
 ## Data Preparation
 

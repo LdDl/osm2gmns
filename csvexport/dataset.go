@@ -23,8 +23,12 @@ type fileChange struct {
 
 // WriteDatasets stages all selected datasets before replacing their managed files.
 // Unrelated files and unselected levels are left in place.
-func WriteDatasets(outputDir string, datasets []Dataset) error {
-	err := validateTables(datasets)
+func WriteDatasets(outputDir string, datasets []Dataset, configure ...Option) error {
+	settings, err := resolveOptions(configure)
+	if err != nil {
+		return err
+	}
+	err = validateTables(datasets)
 	if err != nil {
 		return err
 	}
@@ -57,7 +61,7 @@ func WriteDatasets(outputDir string, datasets []Dataset) error {
 			if len(table.Rows) == 0 && table.Name != "node" && table.Name != "link" {
 				continue
 			}
-			err = WriteTable(filepath.Join(staging, name), table)
+			err = WriteTable(filepath.Join(staging, name), table, WithDelimiter(settings.delimiter))
 			if err != nil {
 				return fmt.Errorf("%s: %w", name, err)
 			}
@@ -68,7 +72,10 @@ func WriteDatasets(outputDir string, datasets []Dataset) error {
 				"profile":  "tabular-data-resource",
 				"format":   "csv",
 				"encoding": "utf-8",
-				"dialect":  map[string]any{"delimiter": ",", "header": true},
+				"dialect": map[string]any{
+					"delimiter": string(settings.delimiter),
+					"header":    true,
+				},
 				"schema":   schemaBaseURL + table.Name + ".schema.json",
 			})
 		}

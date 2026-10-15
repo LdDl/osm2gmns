@@ -27,7 +27,9 @@ func readCSVRecords(t *testing.T, directory, filename string) []map[string]strin
 		t.FailNow()
 	}
 	defer file.Close()
-	records, err := csv.NewReader(file).ReadAll()
+	reader := csv.NewReader(file)
+	reader.Comma = ';'
+	records, err := reader.ReadAll()
 	assert.NoError(t, err)
 	if err != nil || len(records) == 0 {
 		t.FailNow()

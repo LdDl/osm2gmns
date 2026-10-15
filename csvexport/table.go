@@ -20,9 +20,13 @@ type Dataset struct {
 	Provenance map[string]any
 }
 
-// WriteTable writes a single comma-separated table and reports buffered write errors.
-func WriteTable(filename string, table Table) error {
-	err := validateTable(table)
+// WriteTable writes a CSV table and reports buffered write errors.
+func WriteTable(filename string, table Table, configure ...Option) error {
+	settings, err := resolveOptions(configure)
+	if err != nil {
+		return err
+	}
+	err = validateTable(table)
 	if err != nil {
 		return err
 	}
@@ -31,6 +35,7 @@ func WriteTable(filename string, table Table) error {
 		return err
 	}
 	writer := csv.NewWriter(file)
+	writer.Comma = settings.delimiter
 	err = writer.Write(table.Header)
 	if err == nil {
 		for _, row := range table.Rows {

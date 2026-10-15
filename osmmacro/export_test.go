@@ -38,7 +38,7 @@ func readExportRows(t *testing.T, directory, filename string) []map[string]strin
 		t.Fatal(err)
 	}
 	reader := csv.NewReader(bytes.NewReader(data))
-	reader.Comma = ','
+	reader.Comma = ';'
 	records, err := reader.ReadAll()
 	if err != nil {
 		t.Fatal(err)

@@ -11,12 +11,12 @@ import (
 	"github.com/LdDl/osm2gmns/csvvalue"
 )
 
-func ExportToCSV(net *meso.Net, outputDir string) error {
+func ExportToCSV(net *meso.Net, outputDir string, options ...csvexport.Option) error {
 	dataset, err := BuildDataset(net)
 	if err != nil {
 		return err
 	}
-	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset})
+	return csvexport.WriteDatasets(outputDir, []csvexport.Dataset{dataset}, options...)
 }
 
 // BuildDataset validates and serializes prepared records without modifying the network.
