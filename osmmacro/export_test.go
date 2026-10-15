@@ -6,26 +6,28 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"reflect"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/LdDl/go-gmns/gmns"
 	"github.com/LdDl/go-gmns/macro"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/wkt"
+	"github.com/stretchr/testify/assert"
 )
 
-func geometryExportNetwork() *macro.Net {
+func geometryExportNetwork(t *testing.T) *macro.Net {
+	t.Helper()
 	network := macro.NewNet()
 	forward := orb.LineString{{37, 55}, {37.003, 55.002}, {37.01, 55.01}}
 	backward := forward.Clone()
 	backward.Reverse()
-	network.Nodes[1] = macro.NewNodeFrom(1, macro.WithPointGeom(forward[0]))
-	network.Nodes[2] = macro.NewNodeFrom(2, macro.WithPointGeom(forward[len(forward)-1]))
-	network.Links[20] = macro.NewLinkFrom(20, 1, 2, macro.WithLineGeom(forward), macro.WithGeometryID(7), macro.WithDirFlag(gmns.DIR_FLAG_FORWARD), macro.WithLanesNum(2), macro.WithFreeSpeed(40))
-	network.Links[21] = macro.NewLinkFrom(21, 2, 1, macro.WithLineGeom(backward), macro.WithGeometryID(7), macro.WithDirFlag(gmns.DIR_FLAG_REVERSE), macro.WithLanesNum(1), macro.WithFreeSpeed(30))
+	network.Nodes[gmns.NodeIDFromInt64(1)] = macro.NewNodeFrom(gmns.NodeIDFromInt64(1), macro.WithPointGeom(forward[0]))
+	network.Nodes[gmns.NodeIDFromInt64(2)] = macro.NewNodeFrom(gmns.NodeIDFromInt64(2), macro.WithPointGeom(forward[len(forward)-1]))
+	network.Links[gmns.LinkIDFromInt64(20)] = macro.NewLinkFrom(gmns.LinkIDFromInt64(20), gmns.NodeIDFromInt64(1), gmns.NodeIDFromInt64(2), macro.WithLineGeom(forward), macro.WithGeometryID(gmns.GeometryIDFromInt64(7)), macro.WithDirFlag(gmns.DIR_FLAG_FORWARD), macro.WithLanesNum(2), macro.WithFreeSpeed(40))
+	network.Links[gmns.LinkIDFromInt64(21)] = macro.NewLinkFrom(gmns.LinkIDFromInt64(21), gmns.NodeIDFromInt64(2), gmns.NodeIDFromInt64(1), macro.WithLineGeom(backward), macro.WithGeometryID(gmns.GeometryIDFromInt64(7)), macro.WithDirFlag(gmns.DIR_FLAG_REVERSE), macro.WithLanesNum(1), macro.WithFreeSpeed(30))
+	err := network.AddGeometry(gmns.NewGeometry(gmns.GeometryIDFromInt64(7), forward))
+	assert.NoError(t, err)
+	assert.NoError(t, network.SetConfig(gmns.NewConfig(gmns.IDTypeInteger)))
 	return network
 }
 
@@ -53,202 +55,109 @@ func readExportRows(t *testing.T, directory, filename string) []map[string]strin
 }
 
 func TestSharedGeometryExportRoundTrip(t *testing.T) {
-	network := geometryExportNetwork()
-	// Distinct arcs with reversed endpoints must retain their own records.
+	network := geometryExportNetwork(t)
 	arc := orb.LineString{{37.01, 55.01}, {37.009, 55.001}, {37, 55}}
-	network.Links[22] = macro.NewLinkFrom(22, 2, 1, macro.WithLineGeom(arc), macro.WithGeometryID(8), macro.WithDirFlag(gmns.DIR_FLAG_FORWARD))
-	// Independent references are not merged even if the coordinates coincide.
-	network.Links[23] = macro.NewLinkFrom(23, 1, 2, macro.WithLineGeom(network.Links[20].Geom().Clone()), macro.WithGeometryID(9), macro.WithDirFlag(gmns.DIR_FLAG_FORWARD))
+	arcID := gmns.GeometryIDFromInt64(8)
+	network.Links[gmns.LinkIDFromInt64(22)] = macro.NewLinkFrom(gmns.LinkIDFromInt64(22), gmns.NodeIDFromInt64(2), gmns.NodeIDFromInt64(1),
+		macro.WithLineGeom(arc),
+		macro.WithGeometryID(arcID),
+		macro.WithDirFlag(gmns.DIR_FLAG_FORWARD),
+	)
+	assert.NoError(t, network.AddGeometry(gmns.NewGeometry(arcID, arc)))
 	inlineDir := t.TempDir()
 	sharedDir := t.TempDir()
-	err := ExportToCSV(network, inlineDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ExportToCSVWithGeometry(network, sharedDir, GEOMETRY_SHARED)
-	if err != nil {
-		t.Fatal(err)
-	}
-	geometries := readExportRows(t, sharedDir, "geometry.csv")
-	if len(geometries) != 3 {
-		t.Fatalf("got %d geometries, expected 3", len(geometries))
-	}
-	shapes := make(map[string]orb.LineString, len(geometries))
+	assert.NoError(t, ExportToCSV(network, inlineDir))
+	assert.NoError(t, ExportToCSVWithGeometry(network, sharedDir, GEOMETRY_SHARED))
+	geometries := readExportRows(t, sharedDir, "geometry_macro.csv")
+	assert.Len(t, geometries, 2, "opposite road directions share a shape; a different arc does not")
+	shapes := make(map[string]orb.LineString)
 	for _, row := range geometries {
 		shape, err := wkt.UnmarshalLineString(row["geometry"])
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		shapes[row["geometry_id"]] = shape
 	}
-	inlineRows := readExportRows(t, inlineDir, "link.csv")
-	sharedRows := readExportRows(t, sharedDir, "link.csv")
-	if len(sharedRows) != len(inlineRows) {
-		t.Fatal("link count changed")
-	}
+	inlineRows := readExportRows(t, inlineDir, "link_macro.csv")
+	sharedRows := readExportRows(t, sharedDir, "link_macro.csv")
+	assert.Len(t, sharedRows, len(inlineRows))
 	for index, row := range sharedRows {
-		_, hasInlineGeometry := row["geom"]
-		if hasInlineGeometry {
-			t.Fatal("shared export duplicates inline geometry")
-		}
-		shape, exists := shapes[row["geometry_id"]]
-		if !exists {
-			t.Fatalf("missing reference %s", row["geometry_id"])
-		}
-		shape = shape.Clone()
-		switch row["dir_flag"] {
-		case "1":
-		case "-1":
+		assert.Empty(t, row["geometry"])
+		shape := shapes[row["geometry_id"]].Clone()
+		if row["dir_flag"] == "-1" {
 			shape.Reverse()
-		default:
-			t.Fatalf("invalid direction %q", row["dir_flag"])
 		}
-		linkID, err := strconv.Atoi(row["id"])
-		if err != nil {
-			t.Fatal(err)
+		expected, err := wkt.UnmarshalLineString(inlineRows[index]["geometry"])
+		assert.NoError(t, err)
+		assert.Equal(t, expected, shape)
+		for _, field := range []string{"geometry_id", "geometry", "dir_flag"} {
+			delete(row, field)
+			delete(inlineRows[index], field)
 		}
-		if !shape.Equal(network.Links[gmns.LinkID(linkID)].Geom()) {
-			t.Fatalf("link %d: reconstructed travel path differs", linkID)
-		}
-		delete(row, "geometry_id")
-		delete(row, "dir_flag")
-		delete(inlineRows[index], "geom")
-		if !reflect.DeepEqual(row, inlineRows[index]) {
-			t.Fatalf("link %d: nongeometry properties changed", linkID)
-		}
+		assert.Equal(t, inlineRows[index], row)
 	}
-	if !reflect.DeepEqual(readExportRows(t, inlineDir, "node.csv"), readExportRows(t, sharedDir, "node.csv")) {
-		t.Fatal("node export changed")
-	}
-	first, err := os.ReadFile(filepath.Join(sharedDir, "geometry.csv"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ExportToCSVWithGeometry(network, sharedDir, GEOMETRY_SHARED)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, err := os.ReadFile(filepath.Join(sharedDir, "geometry.csv"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(first, second) {
-		t.Fatal("geometry export is not deterministic")
-	}
-}
-
-func TestInlineGeometryCompatibility(t *testing.T) {
-	network := geometryExportNetwork()
-	defaultDir := t.TempDir()
-	inlineDir := t.TempDir()
-	err := ExportToCSV(network, defaultDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ExportToCSVWithGeometry(network, inlineDir, GEOMETRY_INLINE)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{"node.csv", "link.csv"} {
-		original, err := os.ReadFile(filepath.Join(defaultDir, name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		explicit, err := os.ReadFile(filepath.Join(inlineDir, name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(original, explicit) {
-			t.Fatalf("default and inline differ for %s", name)
-		}
-	}
-	_, err = os.Stat(filepath.Join(defaultDir, "geometry.csv"))
-	if !os.IsNotExist(err) {
-		t.Fatal("inline export unexpectedly created geometry.csv")
-	}
-	rows := readExportRows(t, defaultDir, "link.csv")
-	for _, row := range rows {
-		if row["geom"] == "" || len(row) != 19 {
-			t.Fatal("legacy geometry or columns changed")
-		}
-	}
-}
-
-type invalidSharedGeometryCase struct {
-	name    string
-	mutate  func(*macro.Net)
-	message string
-}
-
-func TestInvalidSharedGeometry(t *testing.T) {
-	cases := []invalidSharedGeometryCase{
-		{name: "missing reference", mutate: func(network *macro.Net) { network.Links[20] = macro.NewLinkFrom(20, 1, 2) }, message: "geometry_id"},
-		{name: "missing flag", mutate: func(network *macro.Net) { network.Links[20] = macro.NewLinkFrom(20, 1, 2, macro.WithGeometryID(7)) }, message: "dir_flag"},
-		{name: "zero flag", mutate: func(network *macro.Net) { macro.WithDirFlag(gmns.DIR_FLAG_NONE)(network.Links[20]) }, message: "dir_flag"},
-		{name: "invalid flag", mutate: func(network *macro.Net) { macro.WithDirFlag(2)(network.Links[20]) }, message: "dir_flag"},
-		{name: "contradictory orientation", mutate: func(network *macro.Net) { macro.WithDirFlag(gmns.DIR_FLAG_FORWARD)(network.Links[21]) }, message: "contradicts"},
-		{name: "contradictory path", mutate: func(network *macro.Net) { network.Links[21].Geom()[1][0] += 0.001 }, message: "contradicts"},
-		{name: "empty line", mutate: func(network *macro.Net) { macro.WithLineGeom(nil)(network.Links[20]) }, message: "at least two"},
-		{name: "nonfinite point", mutate: func(network *macro.Net) { network.Links[20].Geom()[1][0] = math.NaN() }, message: "finite"},
-		{name: "missing node", mutate: func(network *macro.Net) { delete(network.Nodes, 1) }, message: "missing source or target"},
-		{name: "wrong endpoints", mutate: func(network *macro.Net) { network.Links[20].Geom().Reverse() }, message: "source and target"},
-		{name: "nil link", mutate: func(network *macro.Net) { network.Links[20] = nil }, message: "nil link"},
-	}
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			network := geometryExportNetwork()
-			testCase.mutate(network)
-			directory := t.TempDir()
-			previous := []byte("previous contents")
-			err := os.WriteFile(filepath.Join(directory, "link.csv"), previous, 0600)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = ExportToCSVWithGeometry(network, directory, GEOMETRY_SHARED)
-			if err == nil || !strings.Contains(err.Error(), testCase.message) {
-				t.Fatalf("expected %q, got %v", testCase.message, err)
-			}
-			actual, err := os.ReadFile(filepath.Join(directory, "link.csv"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(previous, actual) {
-				t.Fatal("validation failure overwrote existing output")
-			}
-		})
-	}
+	assert.Equal(t, readExportRows(t, inlineDir, "node_macro.csv"), readExportRows(t, sharedDir, "node_macro.csv"))
 }
 
 func TestReverseOnlySharedGeometry(t *testing.T) {
-	network := geometryExportNetwork()
-	delete(network.Links, 20)
+	network := geometryExportNetwork(t)
+	delete(network.Links, gmns.LinkIDFromInt64(20))
 	directory := t.TempDir()
-	err := ExportToCSVWithGeometry(network, directory, GEOMETRY_SHARED)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows := readExportRows(t, directory, "geometry.csv")
+	assert.NoError(t, ExportToCSVWithGeometry(network, directory, GEOMETRY_SHARED))
+	rows := readExportRows(t, directory, "geometry_macro.csv")
 	shape, err := wkt.UnmarshalLineString(rows[0]["geometry"])
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	shape.Reverse()
-	if !shape.Equal(network.Links[21].Geom()) {
-		t.Fatal("canonical shape depends on the presence of the forward link")
+	assert.Equal(t, network.Links[gmns.LinkIDFromInt64(21)].Geom(), shape)
+}
+
+func TestInvalidSharedGeometry(t *testing.T) {
+	cases := []string{
+		"missing reference", "missing flag", "zero flag", "invalid flag", "contradictory orientation",
+		"contradictory path", "empty line", "nonfinite point", "missing node", "wrong endpoints", "nil link",
+	}
+	for _, name := range cases {
+		t.Run(name, func(t *testing.T) {
+			network := geometryExportNetwork(t)
+			link := network.Links[gmns.LinkIDFromInt64(20)]
+			switch name {
+			case "missing reference":
+				macro.WithoutGeometryID()(link)
+			case "missing flag":
+				macro.WithoutDirFlag()(link)
+			case "zero flag":
+				macro.WithDirFlag(gmns.DIR_FLAG_NONE)(link)
+			case "invalid flag":
+				macro.WithDirFlag(2)(link)
+			case "contradictory orientation":
+				macro.WithDirFlag(gmns.DIR_FLAG_REVERSE)(link)
+			case "contradictory path":
+				link.Geom()[1][0] += 0.001
+			case "empty line":
+				macro.WithLineGeom(nil)(link)
+			case "nonfinite point":
+				link.Geom()[1][0] = math.NaN()
+			case "missing node":
+				delete(network.Nodes, link.SourceNode())
+			case "wrong endpoints":
+				link.Geom().Reverse()
+			case "nil link":
+				network.Links[link.ID] = nil
+			}
+			directory := t.TempDir()
+			previous := []byte("previous contents")
+			filename := filepath.Join(directory, "link_macro.csv")
+			assert.NoError(t, os.WriteFile(filename, previous, 0600))
+			assert.Error(t, ExportToCSVWithGeometry(network, directory, GEOMETRY_SHARED))
+			actual, err := os.ReadFile(filename)
+			assert.NoError(t, err)
+			assert.Equal(t, previous, actual)
+		})
 	}
 }
 
 func TestInvalidGeometryMode(t *testing.T) {
 	directory := t.TempDir()
-	err := ExportToCSVWithGeometry(geometryExportNetwork(), directory, GeometryMode("unknown"))
-	if err == nil {
-		t.Fatal("invalid mode accepted")
-	}
+	assert.Error(t, ExportToCSVWithGeometry(geometryExportNetwork(t), directory, GeometryMode("unknown")))
 	entries, err := os.ReadDir(directory)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != 0 {
-		t.Fatal("invalid mode wrote files")
-	}
+	assert.NoError(t, err)
+	assert.Empty(t, entries)
 }

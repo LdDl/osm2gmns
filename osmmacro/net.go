@@ -14,13 +14,17 @@ import (
 
 func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM) (*macro.Net, error) {
 
-	lastLinkID := gmns.LinkID(0)
-	lastNodeID := gmns.NodeID(0)
-	lastGeometryID := gmns.GeometryID(0)
+	linkIDs := gmns.IDAllocator{}
+	lastLinkID := linkIDs.NextLinkID()
+	nodeIDs := gmns.IDAllocator{}
+	lastNodeID := nodeIDs.NextNodeID()
+	geometryIDs := gmns.IDAllocator{}
+	lastGeometryID := geometryIDs.NextGeometryID()
 
 	observed := make(map[osm.NodeID]gmns.NodeID)
 	nodes := make(map[gmns.NodeID]*macro.Node)
 	links := make(map[gmns.LinkID]*macro.Link)
+	geometries := make([]*gmns.Geometry, 0)
 
 	for i := range ways {
 		way := ways[i]
@@ -29,7 +33,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 		}
 		segments, err := prepareSegments(way, nodesSet)
 		if err != nil {
-			return nil, errors.Wrapf(err, "can't prepare segments for way: %d", way.ID)
+			return nil, errors.Wrapf(err, "can't prepare segments for way: %v", way.ID)
 		}
 		for j := range segments {
 			segment := segments[j]
@@ -44,12 +48,12 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			if nID, ok := observed[sourceNodeID]; !ok {
 				sourceNode, ok := nodesSet[sourceNodeID]
 				if !ok {
-					return nil, fmt.Errorf("no such source node '%d'. Way ID: '%d'", sourceNodeID, way.ID)
+					return nil, fmt.Errorf("no such source node '%v'. Way ID: '%v'", sourceNodeID, way.ID)
 				}
 				nodes[lastNodeID] = NewNodeFrom(lastNodeID, sourceNode)
 				observed[sourceNodeID] = lastNodeID
 				currentSourceNodeID = lastNodeID
-				lastNodeID++
+				lastNodeID = nodeIDs.NextNodeID()
 			} else {
 				currentSourceNodeID = nID
 			}
@@ -57,12 +61,12 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			if nID, ok := observed[targetNodeID]; !ok {
 				targetNode, ok := nodesSet[targetNodeID]
 				if !ok {
-					return nil, fmt.Errorf("no such target node '%d'. Way ID: '%d'", targetNodeID, way.ID)
+					return nil, fmt.Errorf("no such target node '%v'. Way ID: '%v'", targetNodeID, way.ID)
 				}
 				nodes[lastNodeID] = NewNodeFrom(lastNodeID, targetNode)
 				observed[targetNodeID] = lastNodeID
 				currentTargetNodeID = lastNodeID
-				lastNodeID++
+				lastNodeID = nodeIDs.NextNodeID()
 			} else {
 				currentTargetNodeID = nID
 			}
@@ -72,27 +76,49 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			for i, nodeID := range segment {
 				nodesForSegment[i] = nodesSet[nodeID]
 			}
-			links[lastLinkID] = NewLinkFrom(lastLinkID, currentSourceNodeID, currentTargetNodeID, nodes[currentSourceNodeID].OSMNode(), nodes[currentTargetNodeID].OSMNode(), macro.DIRECTION_FORWARD, way, nodesForSegment)
+			link, err := NewLinkFrom(lastLinkID, currentSourceNodeID, currentTargetNodeID, nodes[currentSourceNodeID].OSMNode(), nodes[currentTargetNodeID].OSMNode(), macro.DIRECTION_FORWARD, way, nodesForSegment)
+			if err != nil {
+				return nil, err
+			}
+			links[lastLinkID] = link
+			geometries = append(geometries, gmns.NewGeometry(lastGeometryID, link.Geom()))
 			// Reference the source segment's forward alignment; Geom() stays in travel order.
 			macro.WithGeometryID(lastGeometryID)(links[lastLinkID])
 			macro.WithDirFlag(gmns.DIR_FLAG_FORWARD)(links[lastLinkID])
 			macro.WithOutcomingLinks(lastLinkID)(nodes[currentSourceNodeID])
 			macro.WithIncomingLinks(lastLinkID)(nodes[currentTargetNodeID])
-			lastLinkID++
+			lastLinkID = linkIDs.NextLinkID()
 			if !way.IsOneWay {
-				links[lastLinkID] = NewLinkFrom(lastLinkID, currentTargetNodeID, currentSourceNodeID, nodes[currentTargetNodeID].OSMNode(), nodes[currentSourceNodeID].OSMNode(), macro.DIRECTION_BACKWARD, way, nodesForSegment)
+				link, err := NewLinkFrom(lastLinkID, currentTargetNodeID, currentSourceNodeID, nodes[currentTargetNodeID].OSMNode(), nodes[currentSourceNodeID].OSMNode(), macro.DIRECTION_BACKWARD, way, nodesForSegment)
+				if err != nil {
+					return nil, err
+				}
+				links[lastLinkID] = link
 				macro.WithGeometryID(lastGeometryID)(links[lastLinkID])
 				macro.WithDirFlag(gmns.DIR_FLAG_REVERSE)(links[lastLinkID])
 				macro.WithOutcomingLinks(lastLinkID)(nodes[currentTargetNodeID])
 				macro.WithIncomingLinks(lastLinkID)(nodes[currentSourceNodeID])
-				lastLinkID++
+				lastLinkID = linkIDs.NextLinkID()
 			}
-			lastGeometryID++
+			lastGeometryID = geometryIDs.NextGeometryID()
 		}
 	}
 
 	net := &macro.Net{Nodes: nodes, Links: links}
-	genBoundaryAndActivityType(net)
+	for _, geometry := range geometries {
+		err := net.AddGeometry(geometry)
+		if err != nil {
+			return nil, err
+		}
+	}
+	configErr := net.SetConfig(gmns.NewConfig(gmns.IDTypeInteger))
+	if configErr != nil {
+		return nil, configErr
+	}
+	err := genBoundaryAndActivityType(net)
+	if err != nil {
+		return nil, err
+	}
 	return net, nil
 }
 
@@ -106,7 +132,7 @@ func prepareSegments(way *wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.Nod
 			nextNodeID := way.Nodes[idx]
 			nextNode, ok := nodesSet[nextNodeID]
 			if !ok {
-				return segments, fmt.Errorf("no such node: %d", nextNodeID)
+				return segments, fmt.Errorf("no such node: %v", nextNodeID)
 			}
 			segmentNodes = append(segmentNodes, nextNodeID)
 			if nextNode.IsCrossing {
@@ -130,7 +156,7 @@ func genBoundaryAndActivityType(macroNet *macro.Net) error {
 		link := macroNet.Links[i]
 		sourceNodeID := link.SourceNode()
 		if _, ok := macroNet.Nodes[sourceNodeID]; !ok {
-			return fmt.Errorf("no source node with ID '%d'. Link ID: '%d'", sourceNodeID, link.ID)
+			return fmt.Errorf("no source node with ID '%v'. Link ID: '%v'", sourceNodeID, link.ID)
 		}
 		if _, ok := nodesLinkTypesCounters[sourceNodeID]; !ok {
 			nodesLinkTypesCounters[sourceNodeID] = make(map[types.LinkType]int)
@@ -144,7 +170,7 @@ func genBoundaryAndActivityType(macroNet *macro.Net) error {
 
 		targetNodeID := link.TargetNode()
 		if _, ok := macroNet.Nodes[targetNodeID]; !ok {
-			return fmt.Errorf("no target node with ID '%d'. Link ID: '%d'", targetNodeID, link.ID)
+			return fmt.Errorf("no target node with ID '%v'. Link ID: '%v'", targetNodeID, link.ID)
 		}
 		if _, ok := nodesLinkTypesCounters[targetNodeID]; !ok {
 			nodesLinkTypesCounters[targetNodeID] = make(map[types.LinkType]int)
@@ -206,11 +232,11 @@ func genBoundaryAndActivityType(macroNet *macro.Net) error {
 		} else if len(incomeLinks) == 1 && (len(outcomeLinks) == 1) {
 			incomingLink, ok := macroNet.Links[incomeLinks[0]]
 			if !ok {
-				return fmt.Errorf("no incoming link with ID '%d'. Node ID: '%d'", incomeLinks[0], node.ID)
+				return fmt.Errorf("no incoming link with ID '%v'. Node ID: '%v'", incomeLinks[0], node.ID)
 			}
 			outcomingLink, ok := macroNet.Links[outcomeLinks[0]]
 			if !ok {
-				return fmt.Errorf("no incoming link with ID '%d'. Node ID: '%d'", outcomeLinks[0], node.ID)
+				return fmt.Errorf("no incoming link with ID '%v'. Node ID: '%v'", outcomeLinks[0], node.ID)
 			}
 			if incomingLink.SourceNode() == outcomingLink.TargetNode() {
 				macro.WithBoundaryType(types.BOUNDARY_INCOME_OUTCOME)(node)
@@ -223,6 +249,10 @@ func genBoundaryAndActivityType(macroNet *macro.Net) error {
 			continue
 		}
 		macro.WithZoneID(node.ID)(node)
+		err := macroNet.AddZone(gmns.NewZone(node.ID))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

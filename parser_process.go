@@ -38,6 +38,10 @@ func GenerateMacroscopic(osmData *OSMWaysNodes, poi bool) (*macro.Net, error) {
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Msg("Preparing macroscopic network done!")
 	}
+	err = macroNet.ValidateDataset()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid prepared macro dataset")
+	}
 	return macroNet, nil
 }
 

@@ -1,6 +1,7 @@
 package osmmacro
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/LdDl/go-gmns/gmns"
@@ -13,10 +14,10 @@ import (
 	"github.com/paulmach/osm"
 )
 
-func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction macro.DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) *macro.Link {
-	freeSpeed := -1.0
+func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceOSMNodeID, targetOSMNodeID osm.NodeID, direction macro.DirectionType, way *wrappers.WayOSM, segmentNodes []*wrappers.NodeOSM) (*macro.Link, error) {
+	freeSpeed := way.FreeSpeed
 	maxSpeed := -1.0
-	capacity := -1
+	capacity := way.Capacity
 
 	if way.Capacity < 0 {
 		capacity = types.NewCapacityDefault(way.LinkType)
@@ -33,18 +34,26 @@ func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceO
 	link := macro.NewLinkFrom(
 		id, sourceNodeID, targetNodeID,
 		macro.WithLinkName(way.Tags.Name),
-		macro.WithFreeSpeed(freeSpeed),
+
 		macro.WithMaxSpeed(maxSpeed),
-		macro.WithCapacity(capacity),
+
 		macro.WithOSMWayID(way.ID),
 		macro.WithSourceOSMNodeID(sourceOSMNodeID),
 		macro.WithTargetOSMNodeID(targetOSMNodeID),
 		macro.WithLinkClass(way.LinkClass),
 		macro.WithLinkType(way.LinkType),
+		macro.WithFacilityType(way.LinkType.String()),
 		macro.WithLinkConnectionType(way.LinkConnectionType),
 		macro.WithLinkControlType(types.CONTROL_TYPE_NOT_SIGNAL),
 		macro.WithAllowedAgentTypes(way.AllowedAgentTypes),
 	)
+
+	if capacity >= 0 {
+		macro.WithCapacity(float64(capacity))(link)
+	}
+	if freeSpeed >= 0 {
+		macro.WithFreeSpeed(freeSpeed)(link)
+	}
 
 	if !way.IsOneWay {
 		macro.WithBidirectionalSource(true)(link)
@@ -70,10 +79,11 @@ func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceO
 				macro.WithLanesNum(way.Tags.Lanes)(link)
 			}
 		default:
-			panic("Should not happen!")
+			return nil, fmt.Errorf("unsupported way direction %v", direction)
 		}
 	}
-	if link.LanesNum() <= 0 {
+	lanes, hasLanes := link.LanesNum()
+	if !hasLanes || lanes < 0 {
 		macro.WithLanesNum(types.NewLanesDefault(link.LinkType()))(link)
 	}
 
@@ -100,13 +110,17 @@ func NewLinkFrom(id gmns.LinkID, sourceNodeID, targetNodeID gmns.NodeID, sourceO
 			linkGeom = append(linkGeom, pt)
 		}
 	default:
-		panic("Should not happen!")
+		return nil, fmt.Errorf("unsupported way direction %v", direction)
 	}
 	macro.WithLineGeom(linkGeom)(link)
 	macro.WithLengthMeters(geo.LengthHaversine(linkGeom))(link)
 	macro.WithLineGeomEuclidean(geomath.LineToEuclidean(linkGeom))(link)
 
 	// Prepare lanes information
-	macro.WithLanesInfo(macro.NewLanesInfo(link))(link)
-	return link
+	laneInfo, err := macro.NewLanesInfo(link)
+	if err != nil {
+		return nil, err
+	}
+	macro.WithLanesInfo(laneInfo)(link)
+	return link, nil
 }

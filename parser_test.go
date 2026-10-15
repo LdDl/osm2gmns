@@ -9,11 +9,13 @@ import (
 	"github.com/LdDl/osm2gmns/osmmacro"
 	"github.com/LdDl/osm2gmns/osmmeso"
 	"github.com/LdDl/osm2gmns/osmmicro"
-	"github.com/LdDl/osm2gmns/osmmovement"
+	"github.com/LdDl/osm2gmns/preparation"
 	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParser(t *testing.T) {
+	outputDir := t.TempDir()
 	parser := NewParser(
 		"./sample.osm",
 		// "/home/dimitrii/Downloads/База данных/MoscowOSM/moscow.osm",
@@ -37,6 +39,7 @@ func TestParser(t *testing.T) {
 		return
 	}
 
+	assert.NoError(t, macroNet.ValidateDataset())
 	st := time.Now()
 	movements, err := generators.GenerateMovements(macroNet)
 	if err != nil {
@@ -47,16 +50,10 @@ func TestParser(t *testing.T) {
 		log.Info().Str("scope", "gen_movement").Int("movements_num", len(movements)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating movements done!")
 	}
 
-	err = osmmacro.ExportToCSV(macroNet, "test_data")
-	if err != nil {
-		t.Error(err)
-		return
+	for _, mvmt := range movements {
+		assert.NoError(t, macroNet.AddMovement(mvmt))
 	}
-	err = osmmovement.ExportToCSV(movements, "test_data/movement.csv")
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	assert.NoError(t, macroNet.ValidateDataset())
 
 	generators.VERBOSE = VERBOSE
 	mesoNet, err := generators.GenerateMesoscopic(macroNet, movements)
@@ -68,11 +65,7 @@ func TestParser(t *testing.T) {
 		log.Info().Str("scope", "gen_meso").Int("meso_nodes_num", len(mesoNet.Nodes)).Int("meso_links_num", len(mesoNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating meso done!")
 	}
 
-	err = osmmeso.ExportToCSV(mesoNet, "test_data")
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	assert.NoError(t, mesoNet.ValidateDataset())
 
 	st = time.Now()
 	microNet, err := generators.GenerateMicroscopic(macroNet, mesoNet, movements)
@@ -84,9 +77,12 @@ func TestParser(t *testing.T) {
 		log.Info().Str("scope", "gen_micro").Int("micro_nodes_num", len(microNet.Nodes)).Int("micro_links_num", len(microNet.Links)).Float64("elapsed", time.Since(st).Seconds()).Msg("Generating micro done!")
 	}
 
-	err = osmmicro.ExportToCSV(microNet, "test_data")
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	assert.NoError(t, microNet.ValidateDataset())
+	options := preparation.DefaultUseOptions()
+	assert.NoError(t, preparation.Macro(macroNet, options))
+	assert.NoError(t, preparation.Meso(mesoNet, options))
+	assert.NoError(t, preparation.Micro(microNet, options))
+	assert.NoError(t, osmmacro.ExportToCSV(macroNet, outputDir))
+	assert.NoError(t, osmmeso.ExportToCSV(mesoNet, outputDir))
+	assert.NoError(t, osmmicro.ExportToCSV(microNet, outputDir))
 }
