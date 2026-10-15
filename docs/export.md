@@ -47,4 +47,4 @@ Geometry IDs and canonical shapes must already exist before shared export. Seria
 
 The writer stages every selected dataset before replacing managed files, removes stale optional tables for those levels, and leaves unrelated files and unselected levels untouched. Ordinary replacement errors trigger rollback; if rollback fails, the error identifies retained backups. The multi-file operation is not atomic against process termination, power loss or concurrent access. Avoid concurrent writers to one output directory.
 
-Signal timing, time-of-day, location and curb tables are outside the supported scope. See [future work](../EXPORT_ROADMAP.md).
+Signal timing, time-of-day, location and curb tables are outside the supported scope. May be I will add them in the future.
