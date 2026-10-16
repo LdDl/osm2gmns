@@ -148,6 +148,9 @@ osmconvert map.osm --drop-author --drop-version --out-pbf -o=map.osm.pbf
 go get github.com/LdDl/osm2gmns@latest
 ```
 
-See the [complete example](cmd/examples/read_osm/README.md) for generation, dataset preparation and export.
+Examples:
+
+- [Read OSM](cmd/examples/read_osm/README.md): generate networks, prepare datasets and export CSV.
+- [Prepare meso from GMNS](cmd/examples/prepare_meso/README.md): read a saved macro datapackage and prepare meso without an OSM file.
 
 See [export details](docs/export.md) for the supported records, ownership and modeling assumptions.
