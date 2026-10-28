@@ -41,6 +41,12 @@ The working model uses metric units: meters, km/h and seconds, with WGS84 coordi
 
 Geometry IDs and canonical shapes must already exist before shared export. Serialization does not allocate IDs or repair missing geometry. Prepared geometry catalogs are retained in both modes, even when inline links no longer reference them; provenance retains the original geometry reference and direction. Consequently, inline mode can contain both per-link shapes and a geometry catalog. Shared mode avoids repeating the referenced shapes in links.
 
+## Source evidence and heights
+
+`-source-metadata` includes captured OSM tags and exact source spans in macro provenance. Use `-source-metadata=false` for readers that require the original metadata shape. Standard tables remain independent of this optional evidence. See [source evidence](source-evidence.md) for the supported tags and mapping.
+
+Supported node `ele` values populate `z_coord` in meters under the OSM EGM96 convention. Invalid or unknown values remain absent. Intermediate shape-point elevations remain evidence because line geometry is two-dimensional. Structure tags never generate heights, and `incline` is retained without assigning a numerical `grade`.
+
 ## Export API and writes
 
 CSV uses `;` by default. Set `-delimiter ","` in the CLI or pass `csvexport.WithDelimiter(',')` to `ExportToCSV`, `ExportToCSVWithGeometry`, `WriteDatasets` or `WriteTable`. The separator must be one valid UTF-8 character; double quotes, CR, LF, NUL and the Unicode replacement character are rejected. Every datapackage resource declares the chosen separator. Comma-separated lists inside `allowed_uses` and `use_group.uses` keep their standard meaning regardless of the CSV separator.
