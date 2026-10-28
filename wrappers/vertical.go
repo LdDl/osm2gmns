@@ -12,11 +12,23 @@ import (
 
 var elevationNumber = regexp.MustCompile(`^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?: m)?$`)
 
+var tagsSource map[string]struct{} = map[string]struct{}{
+	"bridge":     {},
+	"tunnel":     {},
+	"covered":    {},
+	"layer":      {},
+	"level":      {},
+	"oneway":     {},
+	"ele":        {},
+	"source:ele": {},
+	"incline":    {},
+}
+
 // SourceTags preserves source spelling, empty values and repeated keys in source order.
 func SourceTags(tags osm.Tags) osm.Tags {
 	result := make(osm.Tags, 0)
 	for _, tag := range tags {
-		if tag.Key == "bridge" || tag.Key == "tunnel" || tag.Key == "covered" || tag.Key == "layer" || tag.Key == "level" || tag.Key == "oneway" || tag.Key == "ele" || strings.HasPrefix(tag.Key, "ele:") || tag.Key == "source:ele" || tag.Key == "incline" || strings.HasPrefix(tag.Key, "incline:") {
+		if _, ok := tagsSource[tag.Key]; ok || strings.HasPrefix(tag.Key, "ele:") || strings.HasPrefix(tag.Key, "incline:") {
 			result = append(result, tag)
 		}
 	}
