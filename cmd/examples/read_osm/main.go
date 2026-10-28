@@ -40,7 +40,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	macroNet, err := osm2gmns.GenerateMacroscopic(osmData, false)
+	macroNet, evidence, err := osm2gmns.GenerateMacroscopicWithEvidence(osmData, false)
 	if err != nil {
 		return err
 	}
@@ -87,6 +87,10 @@ func run() error {
 		return err
 	}
 	macroDataset, err := osmmacro.BuildDataset(macroNet, osmmacro.GEOMETRY_SHARED)
+	if err != nil {
+		return err
+	}
+	err = evidence.Attach(macroNet, &macroDataset)
 	if err != nil {
 		return err
 	}

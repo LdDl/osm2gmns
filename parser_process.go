@@ -15,34 +15,50 @@ import (
 )
 
 func GenerateMacroscopic(osmData *OSMWaysNodes, poi bool) (*macro.Net, error) {
+	net, _, err := generateMacroscopic(osmData, poi, false)
+	return net, err
+}
+
+// GenerateMacroscopicWithEvidence retains source data independently of standard GMNS records.
+func GenerateMacroscopicWithEvidence(osmData *OSMWaysNodes, poi bool) (*macro.Net, *osmmacro.SourceEvidence, error) {
+	return generateMacroscopic(osmData, poi, true)
+}
+
+func generateMacroscopic(osmData *OSMWaysNodes, poi, retainEvidence bool) (*macro.Net, *osmmacro.SourceEvidence, error) {
 	ways, nodesSet, allowedAgentTypes := osmData.Ways, osmData.Nodes, osmData.AllowedAgentTypes
 	preparedWays, err := prepareWays(ways, nodesSet, allowedAgentTypes)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't prepare ways")
+		return nil, nil, errors.Wrap(err, "Can't prepare ways")
 	}
 	preparedNodes, err := prepareNodes(nodesSet)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't prepare nodes")
+		return nil, nil, errors.Wrap(err, "Can't prepare nodes")
 	}
 	err = markPureCycles(preparedNodes, preparedWays)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't mark pure cycles")
+		return nil, nil, errors.Wrap(err, "Can't mark pure cycles")
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Msg("Preparing macroscopic network")
 	}
-	macroNet, err := osmmacro.NewNetFromOSM(preparedWays, preparedNodes)
+	var macroNet *macro.Net
+	var evidence *osmmacro.SourceEvidence
+	if retainEvidence {
+		macroNet, evidence, err = osmmacro.NewNetFromOSMWithEvidence(preparedWays, preparedNodes)
+	} else {
+		macroNet, err = osmmacro.NewNetFromOSM(preparedWays, preparedNodes)
+	}
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't prepare macroscopic network")
+		return nil, nil, errors.Wrap(err, "Can't prepare macroscopic network")
 	}
 	if VERBOSE {
 		log.Info().Str("scope", "gen_macro").Int("macro_nodes_num", len(macroNet.Nodes)).Int("macro_links_num", len(macroNet.Links)).Msg("Preparing macroscopic network done!")
 	}
 	err = macroNet.ValidateDataset()
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid prepared macro dataset")
+		return nil, nil, errors.Wrap(err, "invalid prepared macro dataset")
 	}
-	return macroNet, nil
+	return macroNet, evidence, nil
 }
 
 // prepareNodes examines nodes which has use count > 0 and use count > 2 on being cross

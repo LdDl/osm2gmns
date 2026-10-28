@@ -13,6 +13,25 @@ import (
 )
 
 func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM) (*macro.Net, error) {
+	return newNetFromOSM(ways, nodesSet, nil)
+}
+
+// NewNetFromOSMWithEvidence captures source spans while constructing the network.
+func NewNetFromOSMWithEvidence(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM) (*macro.Net, *SourceEvidence, error) {
+	evidence := newSourceEvidence()
+	net, err := newNetFromOSM(ways, nodesSet, evidence)
+	if err != nil {
+		return nil, nil, err
+	}
+	return net, evidence, nil
+}
+
+func newNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM, evidence *SourceEvidence) (*macro.Net, error) {
+
+	elevations, err := readNodeElevations(ways, nodesSet)
+	if err != nil {
+		return nil, err
+	}
 
 	linkIDs := gmns.IDAllocator{}
 	lastLinkID := linkIDs.NextLinkID()
@@ -35,6 +54,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 		if err != nil {
 			return nil, errors.Wrapf(err, "can't prepare segments for way: %v", way.ID)
 		}
+		startIndex := 0
 		for j := range segments {
 			segment := segments[j]
 			if len(segment) < 2 {
@@ -50,7 +70,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 				if !ok {
 					return nil, fmt.Errorf("no such source node '%v'. Way ID: '%v'", sourceNodeID, way.ID)
 				}
-				nodes[lastNodeID] = NewNodeFrom(lastNodeID, sourceNode)
+				nodes[lastNodeID] = newNodeFromElevation(lastNodeID, sourceNode, elevations[sourceNodeID].meters)
 				observed[sourceNodeID] = lastNodeID
 				currentSourceNodeID = lastNodeID
 				lastNodeID = nodeIDs.NextNodeID()
@@ -63,7 +83,7 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 				if !ok {
 					return nil, fmt.Errorf("no such target node '%v'. Way ID: '%v'", targetNodeID, way.ID)
 				}
-				nodes[lastNodeID] = NewNodeFrom(lastNodeID, targetNode)
+				nodes[lastNodeID] = newNodeFromElevation(lastNodeID, targetNode, elevations[targetNodeID].meters)
 				observed[targetNodeID] = lastNodeID
 				currentTargetNodeID = lastNodeID
 				lastNodeID = nodeIDs.NextNodeID()
@@ -88,18 +108,28 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 			macro.WithOutcomingLinks(lastLinkID)(nodes[currentSourceNodeID])
 			macro.WithIncomingLinks(lastLinkID)(nodes[currentTargetNodeID])
 			lastLinkID = linkIDs.NextLinkID()
+			var backwardLink *macro.Link
 			if !way.IsOneWay {
 				link, err := NewLinkFrom(lastLinkID, currentTargetNodeID, currentSourceNodeID, nodes[currentTargetNodeID].OSMNode(), nodes[currentSourceNodeID].OSMNode(), macro.DIRECTION_BACKWARD, way, nodesForSegment)
 				if err != nil {
 					return nil, err
 				}
 				links[lastLinkID] = link
+				backwardLink = link
 				macro.WithGeometryID(lastGeometryID)(links[lastLinkID])
 				macro.WithDirFlag(gmns.DIR_FLAG_REVERSE)(links[lastLinkID])
 				macro.WithOutcomingLinks(lastLinkID)(nodes[currentTargetNodeID])
 				macro.WithIncomingLinks(lastLinkID)(nodes[currentSourceNodeID])
 				lastLinkID = linkIDs.NextLinkID()
 			}
+			if evidence != nil {
+				evidence.captureWay(way)
+				evidence.captureLink(link, way, startIndex, startIndex+len(segment)-1, 1)
+				if !way.IsOneWay {
+					evidence.captureLink(backwardLink, way, startIndex, startIndex+len(segment)-1, -1)
+				}
+			}
+			startIndex += len(segment) - 1
 			lastGeometryID = geometryIDs.NextGeometryID()
 		}
 	}
@@ -115,9 +145,14 @@ func NewNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 	if configErr != nil {
 		return nil, configErr
 	}
-	err := genBoundaryAndActivityType(net)
+	err = genBoundaryAndActivityType(net)
 	if err != nil {
 		return nil, err
+	}
+	if evidence != nil {
+		evidence.captureNodes(net, nodesSet, elevations)
+	} else {
+		warnNodeElevations(elevations)
 	}
 	return net, nil
 }
