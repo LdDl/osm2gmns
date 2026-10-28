@@ -8,7 +8,7 @@ import (
 )
 
 func NewNodeFrom(id gmns.NodeID, node *wrappers.NodeOSM) *macro.Node {
-	return macro.NewNodeFrom(
+	result := macro.NewNodeFrom(
 		id,
 		macro.WithNodeName(node.Name),
 		macro.WithOSMHighwayTag(node.OsmData.Highway),
@@ -17,4 +17,9 @@ func NewNodeFrom(id gmns.NodeID, node *wrappers.NodeOSM) *macro.Node {
 		macro.WithPointGeom(node.InnerNode.Point()),
 		macro.WithPointGeomEuclidean(geomath.PointToEuclidean(node.InnerNode.Point())),
 	)
+	altitude, present, _ := wrappers.NodeElevation(node.InnerNode.Tags)
+	if present {
+		macro.WithAltitudeMeters(altitude)(result)
+	}
+	return result
 }
