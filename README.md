@@ -75,6 +75,7 @@ osm2gmns -help
 | `-input` | (required) | Input OSM file path (.osm or .osm.pbf) |
 | `-output` | `./output` | Output directory for CSV files |
 | `-delimiter` | `;` | CSV separator: one character, for example `-delimiter ","` |
+| `-source-metadata` | `true` | Include optional OSM structure/elevation evidence in macro provenance |
 | `-geometry` | `inline` | Macro geometry: `inline` in `link_macro.csv`, or `shared` references to `geometry_macro.csv` |
 | `-networks` | `macro,movement,meso,micro` | Levels to export; `movement` selects its owning macro dataset |
 | `-agents` | `auto,bike,walk` | Allowed agent types |
