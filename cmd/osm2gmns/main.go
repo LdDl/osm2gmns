@@ -41,6 +41,7 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 	inputFile := flags.String("input", "", "Input OSM file (.osm or .osm.pbf)")
 	outputDir := flags.String("output", "./output", "Flat output directory for GMNS datasets")
 	delimiterFlag := flags.String("delimiter", string(csvexport.DefaultDelimiter), "CSV separator: one character")
+	sourceMetadata := flags.Bool("source-metadata", true, "Include optional OSM source evidence in macro provenance")
 	geometryMode := flags.String("geometry", "inline", "Macro geometry: inline or shared; meso/micro remain inline")
 	networkLevels := flags.String("networks", "macro,movement,meso,micro", "Levels to export: macro,meso,micro; movement also selects its macro network")
 	agentTypes := flags.String("agents", "auto,bike,walk", "Allowed agents: auto,bike,walk")
@@ -118,9 +119,14 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	macroNet, err := osm2gmns.GenerateMacroscopic(source, *preparePOI)
+	macroNet, evidence, err := osm2gmns.GenerateMacroscopicWithEvidence(source, *preparePOI)
 	if err != nil {
 		return err
+	}
+	if !*suppressWarnings {
+		for _, diagnostic := range evidence.Diagnostics() {
+			fmt.Fprintf(stderr, "OSM %s %s: %s: %s\n", diagnostic.Kind, diagnostic.ID, diagnostic.Code, diagnostic.Message)
+		}
 	}
 	config := gmns.NewConfig(gmns.IDTypeInteger,
 		gmns.WithDatasetName(filepath.Base(*inputFile)),
@@ -162,6 +168,12 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 		dataset, buildErr := osmmacro.BuildDataset(macroNet, mode)
 		if buildErr != nil {
 			return buildErr
+		}
+		if *sourceMetadata {
+			err = evidence.Attach(macroNet, &dataset)
+			if err != nil {
+				return err
+			}
 		}
 		dataset.Provenance["generated_movement_codes"] = originalCodes
 		datasets = append(datasets, dataset)
