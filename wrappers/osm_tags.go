@@ -65,6 +65,7 @@ var (
 )
 
 type WayTags struct {
+	sourceTags        osm.Tags
 	Name              string
 	Highway           string
 	Railway           string
@@ -257,6 +258,7 @@ func NewWayTagsFrom(way *osm.Way) WayTags {
 	}
 
 	return WayTags{
+		sourceTags:        SourceTags(tags),
 		Name:              name,
 		Highway:           highway,
 		Railway:           railway,
