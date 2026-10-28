@@ -23,11 +23,15 @@ func NewNetFromOSMWithEvidence(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]
 	if err != nil {
 		return nil, nil, err
 	}
-	evidence.captureNodes(net, nodesSet)
 	return net, evidence, nil
 }
 
 func newNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.NodeOSM, evidence *SourceEvidence) (*macro.Net, error) {
+
+	elevations, err := readNodeElevations(ways, nodesSet)
+	if err != nil {
+		return nil, err
+	}
 
 	linkIDs := gmns.IDAllocator{}
 	lastLinkID := linkIDs.NextLinkID()
@@ -66,7 +70,7 @@ func newNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 				if !ok {
 					return nil, fmt.Errorf("no such source node '%v'. Way ID: '%v'", sourceNodeID, way.ID)
 				}
-				nodes[lastNodeID] = NewNodeFrom(lastNodeID, sourceNode)
+				nodes[lastNodeID] = newNodeFromElevation(lastNodeID, sourceNode, elevations[sourceNodeID].meters)
 				observed[sourceNodeID] = lastNodeID
 				currentSourceNodeID = lastNodeID
 				lastNodeID = nodeIDs.NextNodeID()
@@ -79,7 +83,7 @@ func newNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 				if !ok {
 					return nil, fmt.Errorf("no such target node '%v'. Way ID: '%v'", targetNodeID, way.ID)
 				}
-				nodes[lastNodeID] = NewNodeFrom(lastNodeID, targetNode)
+				nodes[lastNodeID] = newNodeFromElevation(lastNodeID, targetNode, elevations[targetNodeID].meters)
 				observed[targetNodeID] = lastNodeID
 				currentTargetNodeID = lastNodeID
 				lastNodeID = nodeIDs.NextNodeID()
@@ -141,9 +145,14 @@ func newNetFromOSM(ways []*wrappers.WayOSM, nodesSet map[osm.NodeID]*wrappers.No
 	if configErr != nil {
 		return nil, configErr
 	}
-	err := genBoundaryAndActivityType(net)
+	err = genBoundaryAndActivityType(net)
 	if err != nil {
 		return nil, err
+	}
+	if evidence != nil {
+		evidence.captureNodes(net, nodesSet, elevations)
+	} else {
+		warnNodeElevations(elevations)
 	}
 	return net, nil
 }

@@ -95,7 +95,7 @@ func (evidence *SourceEvidence) captureLink(link *macro.Link, way *wrappers.WayO
 	}
 }
 
-func (evidence *SourceEvidence) captureNodes(net *macro.Net, nodes map[osm.NodeID]*wrappers.NodeOSM) {
+func (evidence *SourceEvidence) captureNodes(net *macro.Net, nodes map[osm.NodeID]*wrappers.NodeOSM, elevations map[osm.NodeID]nodeElevation) {
 	identities := make(map[osm.NodeID]gmns.NodeID)
 	for id, node := range net.Nodes {
 		identities[node.OSMNode()] = id
@@ -125,15 +125,15 @@ func (evidence *SourceEvidence) captureNodes(net *macro.Net, nodes map[osm.NodeI
 			point: node.InnerNode.Point(),
 			tags:  tags,
 		})
-		_, present, err := wrappers.NodeElevation(tags)
-		if err != nil {
+		elevation := elevations[id]
+		if elevation.err != nil {
 			evidence.diagnostics = append(evidence.diagnostics, SourceDiagnostic{
 				Kind:    "node",
 				ID:      strconv.FormatInt(int64(id), 10),
 				Code:    "unsupported_elevation",
-				Message: err.Error(),
+				Message: elevation.err.Error(),
 			})
-		} else if present && identities[id].IsZero() {
+		} else if elevation.meters != nil && identities[id].IsZero() {
 			evidence.diagnostics = append(evidence.diagnostics, SourceDiagnostic{
 				Kind:    "node",
 				ID:      strconv.FormatInt(int64(id), 10),
